@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>유형별 해양사고 현황 대시보드</title>
+  <style>
+    :root {
+      --bg0:#061826;
+      --bg1:#0a2a3e;
+      --card:rgba(255,255,255,.095);
+      --card2:rgba(255,255,255,.13);
+      --text:#eff8ff;
+      --muted:#9fc0d6;
+      --line:rgba(180,220,255,.18);
+      --accent:#47d7ff;
+      --accent2:#5cf2bb;
+      --warn:#ffd166;
+      --danger:#ff6b6b;
+      --shadow:0 24px 60px rgba(0,0,0,.28);
+    }
+    * { box-sizing:border-box; }
+    body {
+      margin:0;
+      font-family:"Segoe UI","Malgun Gothic",Arial,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(circle at 15% 5%, rgba(71,215,255,.26), transparent 32%),
+        radial-gradient(circle at 90% 8%, rgba(92,242,187,.18), transparent 35%),
+        linear-gradient(135deg,var(--bg0),var(--bg1) 56%,#07111f);
+      min-height:100vh;
+    }
+    body::before {
+      content:"";
+      position:fixed; inset:0;
+      background-image:
+        linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px);
+      background-size:44px 44px;
+      mask-image:linear-gradient(to bottom, rgba(0,0,0,.8), transparent 85%);
+      pointer-events:none;
+    }
+    .wrap { width:min(1240px, calc(100% - 32px)); margin:0 auto; padding:34px 0 42px; position:relative; }
+    header {
+      display:grid; grid-template-columns:1fr auto; gap:20px; align-items:end;
+      padding:26px; border:1px solid var(--line); border-radius:28px;
+      background:linear-gradient(135deg, rgba(255,255,255,.14), rgba(255,255,255,.055));
+      box-shadow:var(--shadow); backdrop-filter: blur(16px);
+      margin-bottom:18px; overflow:hidden; position:relative;
+    }
+    header::after {
+      content:"MARINE SAFETY DATA";
+      position:absolute; right:22px; top:10px; font-size:12px; color:rgba(255,255,255,.22);
+      letter-spacing:.24em; font-weight:800;
+    }
+    h1 { margin:0 0 10px; font-size:clamp(28px,4vw,48px); line-height:1.08; letter-spacing:-.04em; }
+    .subtitle { color:var(--muted); font-size:15px; line-height:1.6; }
+    .badge {
+      border:1px solid rgba(71,215,255,.38); border-radius:999px; padding:10px 14px;
+      color:#dff9ff; background:rgba(71,215,255,.10); white-space:nowrap; font-weight:700;
+      box-shadow:0 0 24px rgba(71,215,255,.15) inset;
+    }
+    .cards { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:14px; }
+    .card, .panel {
+      border:1px solid var(--line); border-radius:24px;
+      background:linear-gradient(180deg, var(--card2), var(--card));
+      box-shadow:var(--shadow); backdrop-filter: blur(16px);
+    }
+    .card { padding:20px; min-height:132px; position:relative; overflow:hidden; }
+    .card::after { content:""; position:absolute; width:90px; height:90px; border-radius:50%; right:-30px; bottom:-30px; background:rgba(71,215,255,.12); }
+    .label { color:var(--muted); font-size:13px; font-weight:800; letter-spacing:.02em; }
+    .value { font-size:clamp(28px,3vw,42px); font-weight:900; margin-top:12px; letter-spacing:-.04em; }
+    .note { color:var(--muted); margin-top:8px; font-size:12px; }
+    .filters {
+      display:grid; grid-template-columns:1fr 1fr 1.4fr auto; gap:12px; align-items:end;
+      padding:18px; margin-bottom:14px;
+    }
+    .field label { display:block; color:var(--muted); font-size:12px; font-weight:800; margin-bottom:7px; }
+    select, input {
+      width:100%; border:1px solid var(--line); border-radius:14px; padding:11px 12px;
+      background:rgba(1,11,21,.55); color:var(--text); outline:none;
+    }
+    button {
+      border:0; border-radius:14px; padding:12px 16px; font-weight:900; color:#04141e;
+      background:linear-gradient(135deg,var(--accent),var(--accent2)); cursor:pointer;
+    }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .panel { padding:20px; min-height:360px; overflow:hidden; }
+    .wide { grid-column:1 / -1; }
+    h2 { margin:0 0 14px; font-size:20px; letter-spacing:-.02em; }
+    .chart { width:100%; height:280px; }
+    svg { width:100%; height:100%; display:block; overflow:visible; }
+    .axis, .gridline { stroke:rgba(210,235,255,.22); }
+    .tick { fill:var(--muted); font-size:11px; }
+    .line { fill:none; stroke:var(--accent); stroke-width:4; stroke-linecap:round; stroke-linejoin:round; filter:drop-shadow(0 0 7px rgba(71,215,255,.6)); }
+    .area { fill:rgba(71,215,255,.13); }
+    .bar { fill:url(#barGrad); }
+    .bar2 { fill:url(#barGrad2); }
+    .table-wrap { max-height:420px; overflow:auto; border-radius:18px; border:1px solid var(--line); }
+    table { border-collapse:collapse; width:100%; min-width:980px; background:rgba(0,0,0,.14); }
+    th, td { padding:10px 11px; border-bottom:1px solid rgba(255,255,255,.09); text-align:right; font-size:13px; }
+    th { position:sticky; top:0; background:#0b2a3c; color:#c8edff; z-index:1; }
+    td:first-child, th:first-child { text-align:center; font-weight:800; }
+    tfoot td { position:sticky; bottom:0; background:#092437; color:#fff; font-weight:900; }
+    .highlight {
+      display:flex; gap:12px; align-items:center; padding:16px; border-radius:20px;
+      background:rgba(255,209,102,.11); border:1px solid rgba(255,209,102,.25); margin-top:14px;
+      color:#fff5d6;
+    }
+    .pulse { width:13px; height:13px; border-radius:50%; background:var(--warn); box-shadow:0 0 0 8px rgba(255,209,102,.12); flex:0 0 auto; }
+    footer { color:var(--muted); font-size:12px; text-align:right; margin-top:18px; }
+    @media (max-width:920px) {
+      header, .filters, .grid { grid-template-columns:1fr; }
+      .cards { grid-template-columns:1fr 1fr; }
+    }
+    @media (max-width:580px) {
+      .wrap { width:min(100% - 20px, 520px); padding-top:18px; }
+      .cards { grid-template-columns:1fr; }
+      header { padding:20px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <div>
+        <h1>유형별 해양사고 현황 대시보드</h1>
+        <div class="subtitle">데이터 기간: <strong>1998년 ~ 2012년</strong> · 해양사고 유형별 추이, 합계, 필터 분석</div>
+      </div>
+      <div class="badge">정적 웹페이지 제출용</div>
+    </header>
+
+    <section class="cards" aria-label="요약 카드">
+      <article class="card"><div class="label">전체 사고 건수</div><div class="value" id="kpiTotal">-</div><div class="note">선택 기간 기준 총계 합산</div></article>
+      <article class="card"><div class="label">최다 발생 유형</div><div class="value" id="kpiTopType">-</div><div class="note" id="kpiTopTypeNote">전체 유형 합계 기준</div></article>
+      <article class="card"><div class="label">연평균 사고</div><div class="value" id="kpiAvg">-</div><div class="note">선택 기간 기준 평균</div></article>
+      <article class="card"><div class="label">사고 최다 연도</div><div class="value" id="kpiMaxYear">-</div><div class="note" id="kpiMaxYearNote">총계 기준</div></article>
+    </section>
+
+    <section class="panel filters" aria-label="검색 및 필터">
+      <div class="field"><label for="startYear">시작 연도</label><select id="startYear"></select></div>
+      <div class="field"><label for="endYear">종료 연도</label><select id="endYear"></select></div>
+      <div class="field"><label for="typeSelect">사고 유형 선택</label><select id="typeSelect"></select></div>
+      <button id="resetBtn">필터 초기화</button>
+    </section>
+
+    <section class="grid">
+      <article class="panel">
+        <h2>연도별 총 사고 건수 추이</h2>
+        <div class="chart"><svg id="lineChart" viewBox="0 0 620 280"></svg></div>
+      </article>
+      <article class="panel">
+        <h2>사고 유형별 합계 막대 차트</h2>
+        <div class="chart"><svg id="barChart" viewBox="0 0 620 280"></svg></div>
+      </article>
+      <article class="panel">
+        <h2>최근 5년 총 사고 추이</h2>
+        <div class="chart"><svg id="recentChart" viewBox="0 0 620 280"></svg></div>
+      </article>
+      <article class="panel">
+        <h2>최다 발생 유형 강조</h2>
+        <div id="highlightBox" class="highlight"><span class="pulse"></span><div>분석 중...</div></div>
+        <div class="chart" style="height:220px;margin-top:16px;"><svg id="selectedTypeChart" viewBox="0 0 620 220"></svg></div>
+      </article>
+      <article class="panel wide">
+        <h2>연도별 데이터 표</h2>
+        <div class="table-wrap" id="tableWrap"></div>
+      </article>
+    </section>
+    <footer>Source: 1.1해양수산부_유형별 해양사고현황.csv · CP949 원자료 기반</footer>
+  </main>
+
+<script>
+const rows = [{"시점": 1998, "총계": 772, "충돌": 147, "접촉": 5, "좌초": 77, "전복": 14, "화재/폭발": 60, "침몰": 84, "행방불명": 4, "기관손상": 242, "추진기손상": 24, "키손상": 10, "속구손상": 2, "조난": 48, "시설물손상": 4, "인명사상": 8, "안전운항저해": 43, "해양오염": 0, "기타": 0}, {"시점": 1999, "총계": 849, "충돌": 173, "접촉": 2, "좌초": 68, "전복": 27, "화재/폭발": 67, "침몰": 90, "행방불명": 4, "기관손상": 269, "추진기손상": 18, "키손상": 15, "속구손상": 2, "조난": 24, "시설물손상": 2, "인명사상": 13, "안전운항저해": 73, "해양오염": 2, "기타": 0}, {"시점": 2000, "총계": 634, "충돌": 130, "접촉": 11, "좌초": 58, "전복": 19, "화재/폭발": 48, "침몰": 63, "행방불명": 2, "기관손상": 196, "추진기손상": 8, "키손상": 5, "속구손상": 1, "조난": 23, "시설물손상": 0, "인명사상": 19, "안전운항저해": 51, "해양오염": 0, "기타": 0}, {"시점": 2001, "총계": 610, "충돌": 141, "접촉": 15, "좌초": 60, "전복": 21, "화재/폭발": 62, "침몰": 72, "행방불명": 1, "기관손상": 135, "추진기손상": 8, "키손상": 6, "속구손상": 1, "조난": 25, "시설물손상": 1, "인명사상": 17, "안전운항저해": 44, "해양오염": 1, "기타": 0}, {"시점": 2002, "총계": 557, "충돌": 184, "접촉": 13, "좌초": 58, "전복": 29, "화재/폭발": 42, "침몰": 55, "행방불명": 0, "기관손상": 110, "추진기손상": 9, "키손상": 3, "속구손상": 0, "조난": 18, "시설물손상": 3, "인명사상": 20, "안전운항저해": 13, "해양오염": 0, "기타": 0}, {"시점": 2003, "총계": 531, "충돌": 182, "접촉": 9, "좌초": 65, "전복": 22, "화재/폭발": 53, "침몰": 50, "행방불명": 2, "기관손상": 57, "추진기손상": 12, "키손상": 1, "속구손상": 2, "조난": 21, "시설물손상": 0, "인명사상": 43, "안전운항저해": 12, "해양오염": 0, "기타": 0}, {"시점": 2004, "총계": 804, "충돌": 210, "접촉": 12, "좌초": 75, "전복": 35, "화재/폭발": 57, "침몰": 69, "행방불명": 1, "기관손상": 147, "추진기손상": 17, "키손상": 12, "속구손상": 0, "조난": 45, "시설물손상": 1, "인명사상": 80, "안전운항저해": 42, "해양오염": 1, "기타": 0}, {"시점": 2005, "총계": 658, "충돌": 172, "접촉": 10, "좌초": 46, "전복": 22, "화재/폭발": 71, "침몰": 45, "행방불명": 1, "기관손상": 166, "추진기손상": 17, "키손상": 14, "속구손상": 0, "조난": 16, "시설물손상": 2, "인명사상": 34, "안전운항저해": 41, "해양오염": 1, "기타": 0}, {"시점": 2006, "총계": 657, "충돌": 167, "접촉": 17, "좌초": 66, "전복": 16, "화재/폭발": 41, "침몰": 25, "행방불명": 0, "기관손상": 195, "추진기손상": 11, "키손상": 14, "속구손상": 0, "조난": 11, "시설물손상": 1, "인명사상": 20, "안전운항저해": 68, "해양오염": 5, "기타": 0}, {"시점": 2007, "총계": 566, "충돌": 148, "접촉": 9, "좌초": 39, "전복": 21, "화재/폭발": 37, "침몰": 19, "행방불명": 1, "기관손상": 185, "추진기손상": 4, "키손상": 17, "속구손상": 0, "조난": 8, "시설물손상": 1, "인명사상": 11, "안전운항저해": 65, "해양오염": 1, "기타": 0}, {"시점": 2008, "총계": 480, "충돌": 125, "접촉": 15, "좌초": 32, "전복": 8, "화재/폭발": 25, "침몰": 18, "행방불명": 0, "기관손상": 145, "추진기손상": 7, "키손상": 14, "속구손상": 0, "조난": 11, "시설물손상": 2, "인명사상": 17, "안전운항저해": 61, "해양오염": 0, "기타": 0}, {"시점": 2009, "총계": 723, "충돌": 160, "접촉": 10, "좌초": 43, "전복": 18, "화재/폭발": 34, "침몰": 22, "행방불명": 2, "기관손상": 253, "추진기손상": 16, "키손상": 29, "속구손상": 0, "조난": 16, "시설물손상": 1, "인명사상": 21, "안전운항저해": 96, "해양오염": 2, "기타": 0}, {"시점": 2010, "총계": 737, "충돌": 174, "접촉": 22, "좌초": 64, "전복": 17, "화재/폭발": 25, "침몰": 22, "행방불명": 0, "기관손상": 236, "추진기손상": 8, "키손상": 24, "속구손상": 1, "조난": 9, "시설물손상": 4, "인명사상": 33, "안전운항저해": 91, "해양오염": 7, "기타": 0}, {"시점": 2011, "총계": 946, "충돌": 208, "접촉": 23, "좌초": 64, "전복": 38, "화재/폭발": 57, "침몰": 27, "행방불명": 0, "기관손상": 261, "추진기손상": 13, "키손상": 18, "속구손상": 1, "조난": 41, "시설물손상": 4, "인명사상": 82, "안전운항저해": 101, "해양오염": 8, "기타": 0}, {"시점": 2012, "총계": 726, "충돌": 157, "접촉": 21, "좌초": 53, "전복": 25, "화재/폭발": 55, "침몰": 26, "행방불명": 11, "기관손상": 178, "추진기손상": 7, "키손상": 13, "속구손상": 0, "조난": 44, "시설물손상": 3, "인명사상": 57, "안전운항저해": 68, "해양오염": 8, "기타": 0}];
+const typeCols = ["충돌", "접촉", "좌초", "전복", "화재/폭발", "침몰", "행방불명", "기관손상", "추진기손상", "키손상", "속구손상", "조난", "시설물손상", "인명사상", "안전운항저해", "해양오염", "기타"];
+const years = rows.map(r => r["시점"]);
+const nf = new Intl.NumberFormat("ko-KR");
+
+function sum(arr, key) { return arr.reduce((a,r) => a + Number(r[key] || 0), 0); }
+function fmt(v) { return nf.format(Math.round(v)); }
+
+function initFilters() {
+  const start = document.getElementById("startYear");
+  const end = document.getElementById("endYear");
+  const type = document.getElementById("typeSelect");
+  start.innerHTML = years.map(y => `<option value="${y}">${y}년</option>`).join("");
+  end.innerHTML = years.map(y => `<option value="${y}">${y}년</option>`).join("");
+  end.value = years[years.length - 1];
+  type.innerHTML = [`<option value="총계">총계</option>`].concat(typeCols.map(c => `<option value="${c}">${c}</option>`)).join("");
+}
+
+function filteredRows() {
+  const s = Number(document.getElementById("startYear").value);
+  const e = Number(document.getElementById("endYear").value);
+  const lo = Math.min(s,e), hi = Math.max(s,e);
+  return rows.filter(r => r["시점"] >= lo && r["시점"] <= hi);
+}
+
+function pathLine(data, key, w, h, pad) {
+  const vals = data.map(r => Number(r[key] || 0));
+  const min = Math.min(...vals) * 0.88;
+  const max = Math.max(...vals) * 1.08 || 1;
+  const x = i => pad.l + (data.length === 1 ? 0 : i/(data.length-1))*(w-pad.l-pad.r);
+  const y = v => pad.t + (1 - ((v-min)/(max-min || 1)))*(h-pad.t-pad.b);
+  return { points: data.map((r,i) => [x(i), y(Number(r[key]||0)), r]), min, max, x, y };
+}
+
+function renderLine(svgId, data, key) {
+  const svg = document.getElementById(svgId), w=620, h=280, pad={l:54,r:18,t:20,b:42};
+  if (!data.length) { svg.innerHTML=""; return; }
+  const p = pathLine(data,key,w,h,pad);
+  const d = p.points.map((pt,i) => `${i?'L':'M'} ${pt[0].toFixed(1)} ${pt[1].toFixed(1)}`).join(" ");
+  const base = h-pad.b;
+  const area = d + ` L ${p.points[p.points.length-1][0].toFixed(1)} ${base} L ${p.points[0][0].toFixed(1)} ${base} Z`;
+  let html = `<defs><linearGradient id="areaGrad" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#47d7ff" stop-opacity=".28"/><stop offset="100%" stop-color="#47d7ff" stop-opacity="0"/></linearGradient></defs>`;
+  for (let i=0;i<=4;i++) {
+    const yy = pad.t + i*(h-pad.t-pad.b)/4;
+    const val = p.max - i*(p.max-p.min)/4;
+    html += `<line class="gridline" x1="${pad.l}" y1="${yy}" x2="${w-pad.r}" y2="${yy}"></line><text class="tick" x="${pad.l-8}" y="${yy+4}" text-anchor="end">${fmt(val)}</text>`;
+  }
+  html += `<path d="${area}" fill="url(#areaGrad)"></path><path class="line" d="${d}"></path><line class="axis" x1="${pad.l}" y1="${base}" x2="${w-pad.r}" y2="${base}"></line>`;
+  p.points.forEach((pt,i) => {
+    if (i === 0 || i === p.points.length-1 || i % Math.ceil(p.points.length/6) === 0) html += `<text class="tick" x="${pt[0]}" y="${h-16}" text-anchor="middle">${pt[2]["시점"]}</text>`;
+    html += `<circle cx="${pt[0]}" cy="${pt[1]}" r="4.5" fill="#061826" stroke="#47d7ff" stroke-width="2"><title>${pt[2]["시점"]}년: ${fmt(pt[2][key])}건</title></circle>`;
+  });
+  svg.innerHTML = html;
+}
+
+function renderBar(svgId, items, topN=10) {
+  const svg = document.getElementById(svgId), w=620, h=280, pad={l:90,r:28,t:18,b:28};
+  const data = items.slice(0, topN);
+  const max = Math.max(...data.map(d => d.value), 1);
+  let html = `<defs><linearGradient id="barGrad" x1="0" x2="1"><stop offset="0%" stop-color="#47d7ff"/><stop offset="100%" stop-color="#5cf2bb"/></linearGradient><linearGradient id="barGrad2" x1="0" x2="1"><stop offset="0%" stop-color="#ffd166"/><stop offset="100%" stop-color="#ff8f70"/></linearGradient></defs>`;
+  const rowH = (h-pad.t-pad.b)/data.length;
+  data.forEach((d,i) => {
+    const y = pad.t + i*rowH + 4;
+    const bw = (w-pad.l-pad.r) * d.value / max;
+    html += `<text class="tick" x="${pad.l-10}" y="${y+rowH*.56}" text-anchor="end">${d.type}</text>`;
+    html += `<rect class="${i===0?'bar2':'bar'}" x="${pad.l}" y="${y}" width="${bw}" height="${Math.max(12,rowH-8)}" rx="8"><title>${d.type}: ${fmt(d.value)}건</title></rect>`;
+    html += `<text class="tick" x="${pad.l+bw+8}" y="${y+rowH*.56}">${fmt(d.value)}</text>`;
+  });
+  svg.innerHTML = html;
+}
+
+function renderTable(data) {
+  const cols = ["시점","총계"].concat(typeCols);
+  const totalRow = {};
+  cols.forEach(c => totalRow[c] = c === "시점" ? "합계" : sum(data,c));
+  const thead = `<thead><tr>${cols.map(c => `<th>${c}</th>`).join("")}</tr></thead>`;
+  const body = `<tbody>${data.map(r => `<tr>${cols.map(c => `<td>${c==="시점" ? r[c] : fmt(r[c])}</td>`).join("")}</tr>`).join("")}</tbody>`;
+  const foot = `<tfoot><tr>${cols.map(c => `<td>${c==="시점" ? "합계" : fmt(totalRow[c])}</td>`).join("")}</tr></tfoot>`;
+  document.getElementById("tableWrap").innerHTML = `<table>${thead}${body}${foot}</table>`;
+}
+
+function update() {
+  const data = filteredRows();
+  const selected = document.getElementById("typeSelect").value;
+  const total = sum(data, "총계");
+  const avg = total / Math.max(data.length,1);
+  const totals = typeCols.map(c => ({ type:c, value:sum(data,c) })).sort((a,b)=>b.value-a.value);
+  const top = totals[0];
+  const maxRow = data.reduce((a,r) => Number(r["총계"]) > Number(a["총계"]) ? r : a, data[0]);
+
+  document.getElementById("kpiTotal").textContent = fmt(total) + "건";
+  document.getElementById("kpiTopType").textContent = top.type;
+  document.getElementById("kpiTopTypeNote").textContent = fmt(top.value) + "건";
+  document.getElementById("kpiAvg").textContent = fmt(avg) + "건";
+  document.getElementById("kpiMaxYear").textContent = maxRow["시점"] + "년";
+  document.getElementById("kpiMaxYearNote").textContent = fmt(maxRow["총계"]) + "건";
+
+  renderLine("lineChart", data, "총계");
+  renderBar("barChart", totals, 10);
+  renderLine("recentChart", data.slice(-5), "총계");
+  renderLine("selectedTypeChart", data, selected);
+  document.getElementById("highlightBox").innerHTML = `<span class="pulse"></span><div><strong>${top.type}</strong>이(가) 선택 기간 최다 발생 유형입니다. 합계는 <strong>${fmt(top.value)}건</strong>입니다.</div>`;
+  renderTable(data);
+}
+
+initFilters();
+document.getElementById("startYear").addEventListener("change", update);
+document.getElementById("endYear").addEventListener("change", update);
+document.getElementById("typeSelect").addEventListener("change", update);
+document.getElementById("resetBtn").addEventListener("click", () => {
+  document.getElementById("startYear").value = years[0];
+  document.getElementById("endYear").value = years[years.length-1];
+  document.getElementById("typeSelect").value = "총계";
+  update();
+});
+update();
+</script>
+</body>
+</html>
