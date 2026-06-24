@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3D 지구본 공학용 계산기</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    :root {
+      --blue: #38bdf8;
+      --purple: #8b5cf6;
+      --pink: #ec4899;
+      --green: #22c55e;
+      --red: #ef4444;
+      --dark: #020617;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: white;
+      background:
+        radial-gradient(circle at 15% 15%, rgba(56, 189, 248, 0.35), transparent 30%),
+        radial-gradient(circle at 85% 20%, rgba(139, 92, 246, 0.32), transparent 28%),
+        radial-gradient(circle at 50% 95%, rgba(236, 72, 153, 0.25), transparent 34%),
+        linear-gradient(135deg, #020617, #0f172a 55%, #1e1b4b);
+      overflow: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+      background-size: 44px 44px;
+      pointer-events: none;
+    }
+
+    .phone {
+      width: min(420px, 94vw);
+      height: min(880px, 96vh);
+      padding: 14px;
+      border-radius: 56px;
+      background: linear-gradient(145deg, #111827, #020617);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      box-shadow:
+        0 45px 120px rgba(0, 0, 0, 0.68),
+        inset 0 0 0 2px rgba(255, 255, 255, 0.04);
+      position: relative;
+      z-index: 1;
+    }
+
+    .phone::before {
+      content: "";
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 122px;
+      height: 28px;
+      border-radius: 999px;
+      background: #020617;
+      z-index: 8;
+      box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .phone::after {
+      content: "";
+      position: absolute;
+      top: 22px;
+      left: calc(50% + 43px);
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #172554;
+      box-shadow: 0 0 8px rgba(59, 130, 246, 0.7);
+      z-index: 9;
+    }
+
+    .screen {
+      height: 100%;
+      border-radius: 42px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 25% 0%, rgba(56, 189, 248, 0.28), transparent 34%),
+        radial-gradient(circle at 90% 28%, rgba(236, 72, 153, 0.2), transparent 28%),
+        linear-gradient(180deg, #0f172a, #020617 78%);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* 지구본을 자르는 영역 */
+    .globe-window {
+      position: absolute;
+      top: 38px;
+      left: 0;
+      width: 100%;
+      height: 165px;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* 3D 느낌의 지구본 */
+    .globe-3d {
+      position: absolute;
+      left: 50%;
+      top: -142px;
+      width: 290px;
+      height: 290px;
+      border-radius: 50%;
+      transform: translateX(-50%) rotateX(14deg);
+      transform-style: preserve-3d;
+      background:
+        radial-gradient(circle at 32% 28%, rgba(255,255,255,0.8), transparent 8%),
+        radial-gradient(circle at 36% 32%, rgba(255,255,255,0.35), transparent 18%),
+        radial-gradient(circle at 64% 68%, rgba(2,6,23,0.62), transparent 42%),
+        linear-gradient(135deg, #38bdf8 0%, #2563eb 45%, #0f172a 100%);
+      box-shadow:
+        0 0 58px rgba(56, 189, 248, 0.52),
+        0 0 120px rgba(59, 130, 246, 0.28),
+        inset -38px -32px 46px rgba(0, 0, 0, 0.55),
+        inset 24px 18px 36px rgba(255, 255, 255, 0.22);
+      overflow: hidden;
+      animation: globeFloat 4s ease-in-out infinite;
+    }
+
+    /* 돌아가는 대륙 레이어 */
+    .globe-map {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background:
+        radial-gradient(ellipse at 20% 40%, rgba(34,197,94,0.9) 0 7%, transparent 8%),
+        radial-gradient(ellipse at 43% 35%, rgba(34,197,94,0.75) 0 9%, transparent 10%),
+        radial-gradient(ellipse at 63% 48%, rgba(34,197,94,0.85) 0 10%, transparent 11%),
+        radial-gradient(ellipse at 79% 64%, rgba(34,197,94,0.72) 0 7%, transparent 8%),
+        radial-gradient(ellipse at 45% 70%, rgba(21,128,61,0.8) 0 8%, transparent 9%),
+        radial-gradient(ellipse at 88% 36%, rgba(34,197,94,0.62) 0 8%, transparent 9%);
+      filter: blur(0.4px);
+      animation: rotateLand 8s linear infinite;
+      opacity: 0.9;
+    }
+
+    /* 위도/경도 라인 */
+    .globe-lines {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background:
+        repeating-linear-gradient(
+          90deg,
+          transparent 0 28px,
+          rgba(255,255,255,0.18) 29px 31px
+        ),
+        repeating-linear-gradient(
+          0deg,
+          transparent 0 34px,
+          rgba(255,255,255,0.15) 35px 37px
+        );
+      mix-blend-mode: screen;
+      opacity: 0.7;
+      animation: rotateLines 6s linear infinite;
+    }
+
+    /* 지구본 유리 광택 */
+    .globe-shine {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 30% 25%, rgba(255,255,255,0.55), transparent 16%),
+        linear-gradient(115deg, rgba(255,255,255,0.22), transparent 42%);
+      pointer-events: none;
+    }
+
+    /* 지구본 어두운 뒷면 */
+    .globe-shadow {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 72% 72%, rgba(0,0,0,0.65), transparent 46%);
+      pointer-events: none;
+    }
+
+    @keyframes rotateLand {
+      from {
+        transform: translateX(-45px) rotate(0deg);
+      }
+      to {
+        transform: translateX(45px) rotate(360deg);
+      }
+    }
+
+    @keyframes rotateLines {
+      from {
+        transform: rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes globeFloat {
+      0%, 100% {
+        transform: translateX(-50%) rotateX(14deg) translateY(0);
+      }
+      50% {
+        transform: translateX(-50%) rotateX(14deg) translateY(8px);
+      }
+    }
+
+    .status-bar,
+    .app-header,
+    .display,
+    .mode-row,
+    .buttons,
+    .home-indicator {
+      position: relative;
+      z-index: 2;
+    }
+
+    .status-bar {
+      height: 52px;
+      padding: 16px 28px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 800;
+      color: rgba(255, 255, 255, 0.86);
+    }
+
+    .status-icons {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .signal {
+      display: flex;
+      align-items: end;
+      gap: 2px;
+      height: 13px;
+    }
+
+    .signal span {
+      width: 3px;
+      border-radius: 3px;
+      background: white;
+    }
+
+    .signal span:nth-child(1) { height: 5px; }
+    .signal span:nth-child(2) { height: 8px; }
+    .signal span:nth-child(3) { height: 11px; }
+
+    .battery {
+      width: 22px;
+      height: 11px;
+      border: 1.8px solid white;
+      border-radius: 3px;
+      position: relative;
+    }
+
+    .battery::before {
+      content: "";
+      position: absolute;
+      right: -4px;
+      top: 3px;
+      width: 2px;
+      height: 5px;
+      border-radius: 2px;
+      background: white;
+    }
+
+    .battery::after {
+      content: "";
+      position: absolute;
+      left: 2px;
+      top: 2px;
+      width: 13px;
+      height: 5px;
+      border-radius: 2px;
+      background: var(--green);
+    }
+
+    .app-header {
+      padding: 102px 24px 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .app-title span {
+      display: block;
+      color: #bae6fd;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.16em;
+      margin-bottom: 5px;
+    }
+
+    .app-title h1 {
+      margin: 0;
+      font-size: 25px;
+      letter-spacing: -0.06em;
+    }
+
+    .mode-pill {
+      padding: 9px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      font-size: 12px;
+      font-weight: 900;
+      color: #bae6fd;
+      cursor: pointer;
+    }
+
+    .display {
+      margin: 12px 20px;
+      min-height: 126px;
+      padding: 22px;
+      border-radius: 30px;
+      background: rgba(2, 6, 23, 0.62);
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: flex-end;
+      box-shadow:
+        inset 0 0 30px rgba(0, 0, 0, 0.3),
+        0 18px 40px rgba(0, 0, 0, 0.22);
+      overflow: hidden;
+      backdrop-filter: blur(12px);
+    }
+
+    .expression {
+      max-width: 100%;
+      min-height: 24px;
+      color: rgba(255, 255, 255, 0.48);
+      font-size: 16px;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 10px;
+    }
+
+    .result {
+      max-width: 100%;
+      color: white;
+      font-size: 48px;
+      font-weight: 950;
+      letter-spacing: -0.08em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .mode-row {
+      padding: 0 20px 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .chip {
+      flex: 1;
+      text-align: center;
+      padding: 9px 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.62);
+      font-size: 12px;
+      font-weight: 900;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .chip.active {
+      background: #bae6fd;
+      color: #0f172a;
+    }
+
+    .buttons {
+      flex: 1;
+      padding: 0 20px 22px;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 9px;
+    }
+
+    button {
+      border: none;
+      border-radius: 18px;
+      min-height: 47px;
+      color: white;
+      font-size: 15px;
+      font-weight: 900;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      transition: 0.16s;
+      user-select: none;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    button:active {
+      transform: scale(0.94);
+    }
+
+    .num {
+      font-size: 20px;
+      background: rgba(255, 255, 255, 0.17);
+    }
+
+    .func {
+      color: #dbeafe;
+      background: rgba(59, 130, 246, 0.18);
+    }
+
+    .operator {
+      background: linear-gradient(135deg, #38bdf8, #4f46e5);
+    }
+
+    .danger {
+      background: linear-gradient(135deg, #fb7185, #e11d48);
+    }
+
+    .equal {
+      background: linear-gradient(135deg, #8b5cf6, #ec4899);
+      box-shadow: 0 12px 26px rgba(236, 72, 153, 0.24);
+    }
+
+    .zero {
+      grid-column: span 2;
+    }
+
+    .home-indicator {
+      width: 130px;
+      height: 5px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.75);
+      margin: 0 auto 12px;
+      flex-shrink: 0;
+    }
+
+    @media (max-height: 780px) {
+      .phone {
+        height: 96vh;
+      }
+
+      .app-header {
+        padding-top: 82px;
+      }
+
+      .globe-window {
+        height: 140px;
+      }
+
+      .globe-3d {
+        width: 245px;
+        height: 245px;
+        top: -123px;
+      }
+
+      .display {
+        min-height: 106px;
+      }
+
+      .result {
+        font-size: 40px;
+      }
+
+      button {
+        min-height: 41px;
+        border-radius: 15px;
+        font-size: 13px;
+      }
+
+      .num {
+        font-size: 18px;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .phone {
+        border-radius: 44px;
+        padding: 10px;
+      }
+
+      .screen {
+        border-radius: 36px;
+      }
+
+      .buttons {
+        gap: 8px;
+        padding-inline: 16px;
+      }
+
+      .display {
+        margin-inline: 16px;
+      }
+
+      .app-header {
+        padding-inline: 20px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="phone">
+    <section class="screen">
+      <div class="globe-window">
+        <div class="globe-3d">
+          <div class="globe-map"></div>
+          <div class="globe-lines"></div>
+          <div class="globe-shine"></div>
+          <div class="globe-shadow"></div>
+        </div>
+      </div>
+
+      <div class="status-bar">
+        <span id="clock">00:00</span>
+        <div class="status-icons">
+          <div class="signal">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <span>5G</span>
+          <div class="battery"></div>
+        </div>
+      </div>
+
+      <header class="app-header">
+        <div class="app-title">
+          <span>3D GLOBE SCIENTIFIC</span>
+          <h1>공학 계산기</h1>
+        </div>
+        <button class="mode-pill" onclick="toggleAngleMode()" id="angleMode">DEG</button>
+      </header>
+
+      <section class="display">
+        <div id="expression" class="expression"></div>
+        <div id="result" class="result">0</div>
+      </section>
+
+      <section class="mode-row">
+        <div id="degChip" class="chip active">DEG</div>
+        <div id="radChip" class="chip">RAD</div>
+        <div class="chip">π</div>
+        <div class="chip">log</div>
+      </section>
+
+      <section class="buttons">
+        <button class="danger" onclick="clearAll()">AC</button>
+        <button class="func" onclick="deleteLast()">⌫</button>
+        <button class="func" onclick="appendValue('(')">(</button>
+        <button class="func" onclick="appendValue(')')">)</button>
+        <button class="operator" onclick="appendValue('/')">÷</button>
+
+        <button class="func" onclick="appendFunction('sin(')">sin</button>
+        <button class="func" onclick="appendFunction('cos(')">cos</button>
+        <button class="func" onclick="appendFunction('tan(')">tan</button>
+        <button class="func" onclick="appendValue('π')">π</button>
+        <button class="operator" onclick="appendValue('*')">×</button>
+
+        <button class="func" onclick="appendFunction('log(')">log</button>
+        <button class="func" onclick="appendFunction('ln(')">ln</button>
+        <button class="func" onclick="appendFunction('sqrt(')">√</button>
+        <button class="func" onclick="appendValue('^')">xʸ</button>
+        <button class="operator" onclick="appendValue('-')">−</button>
+
+        <button class="num" onclick="appendValue('7')">7</button>
+        <button class="num" onclick="appendValue('8')">8</button>
+        <button class="num" onclick="appendValue('9')">9</button>
+        <button class="func" onclick="square()">x²</button>
+        <button class="operator" onclick="appendValue('+')">+</button>
+
+        <button class="num" onclick="appendValue('4')">4</button>
+        <button class="num" onclick="appendValue('5')">5</button>
+        <button class="num" onclick="appendValue('6')">6</button>
+        <button class="func" onclick="factorial()">x!</button>
+        <button class="equal" onclick="calculate()">=</button>
+
+        <button class="num" onclick="appendValue('1')">1</button>
+        <button class="num" onclick="appendValue('2')">2</button>
+        <button class="num" onclick="appendValue('3')">3</button>
+        <button class="func" onclick="appendValue('%')">%</button>
+        <button class="func" onclick="toggleSign()">±</button>
+
+        <button class="num zero" onclick="appendValue('0')">0</button>
+        <button class="num" onclick="appendValue('.')">.</button>
+        <button class="func" onclick="appendValue('e')">e</button>
+        <button class="func" onclick="reciprocal()">1/x</button>
+      </section>
+
+      <div class="home-indicator"></div>
+    </section>
+  </main>
+
+  <script>
+    const expressionEl = document.getElementById("expression");
+    const resultEl = document.getElementById("result");
+    const clockEl = document.getElementById("clock");
+    const angleModeBtn = document.getElementById("angleMode");
+    const degChip = document.getElementById("degChip");
+    const radChip = document.getElementById("radChip");
+
+    let expression = "";
+    let justCalculated = false;
+    let angleMode = "DEG";
+
+    function updateClock() {
+      const now = new Date();
+
+      clockEl.textContent = now.toLocaleTimeString("ko-KR", {
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    function appendValue(value) {
+      if (justCalculated && !isOperator(value) && value !== ")") {
+        expression = "";
+        justCalculated = false;
+      }
+
+      if (justCalculated && isOperator(value)) {
+        justCalculated = false;
+      }
+
+      if (value === ".") {
+        const currentNumber = expression.split(/[+\-*/%^()]/).pop();
+        if (currentNumber.includes(".")) return;
+      }
+
+      if (isOperator(value)) {
+        const lastChar = expression.slice(-1);
+
+        if (expression === "" && value !== "-") return;
+
+        if (isOperator(lastChar)) {
+          expression = expression.slice(0, -1);
+        }
+      }
+
+      expression += value;
+      updateDisplay();
+    }
+
+    function appendFunction(func) {
+      if (justCalculated) {
+        expression = "";
+        justCalculated = false;
+      }
+
+      expression += func;
+      updateDisplay();
+    }
+
+    function isOperator(value) {
+      return ["+", "-", "*", "/", "%", "^"].includes(value);
+    }
+
+    function updateDisplay() {
+      resultEl.textContent = formatExpression(expression || "0");
+    }
+
+    function clearAll() {
+      expression = "";
+      expressionEl.textContent = "";
+      resultEl.textContent = "0";
+      justCalculated = false;
+    }
+
+    function deleteLast() {
+      if (justCalculated) {
+        clearAll();
+        return;
+      }
+
+      expression = expression.slice(0, -1);
+      updateDisplay();
+    }
+
+    function calculate() {
+      if (!expression) return;
+
+      try {
+        const original = expression;
+        const result = evaluateExpression(expression);
+
+        if (!Number.isFinite(result)) {
+          throw new Error("Invalid result");
+        }
+
+        expressionEl.textContent = formatExpression(original) + " =";
+        expression = formatNumber(result);
+        resultEl.textContent = expression;
+        justCalculated = true;
+      } catch (error) {
+        resultEl.textContent = "Error";
+        expressionEl.textContent = "계산식을 확인하세요";
+        expression = "";
+        justCalculated = true;
+      }
+    }
+
+    function evaluateExpression(input) {
+      let safe = input;
+
+      safe = safe.replaceAll("π", "Math.PI");
+      safe = safe.replaceAll("e", "Math.E");
+      safe = safe.replaceAll("^", "**");
+
+      safe = safe.replace(/sqrt\(/g, "Math.sqrt(");
+      safe = safe.replace(/log\(/g, "Math.log10(");
+      safe = safe.replace(/ln\(/g, "Math.log(");
+      safe = safe.replace(/sin\(/g, "sin(");
+      safe = safe.replace(/cos\(/g, "cos(");
+      safe = safe.replace(/tan\(/g, "tan(");
+
+      safe = safe.replace(/(\d+(\.\d+)?)%/g, "($1/100)");
+
+      const sin = x => Math.sin(toRadiansIfNeeded(x));
+      const cos = x => Math.cos(toRadiansIfNeeded(x));
+      const tan = x => Math.tan(toRadiansIfNeeded(x));
+
+      return Function(
+        "sin",
+        "cos",
+        "tan",
+        `"use strict"; return (${safe})`
+      )(sin, cos, tan);
+    }
+
+    function toRadiansIfNeeded(value) {
+      return angleMode === "DEG" ? value * Math.PI / 180 : value;
+    }
+
+    function formatNumber(value) {
+      const rounded = Number(value.toFixed(12));
+      return String(rounded);
+    }
+
+    function formatExpression(value) {
+      return value
+        .replaceAll("*", "×")
+        .replaceAll("/", "÷")
+        .replaceAll("-", "−")
+        .replaceAll("sqrt", "√");
+    }
+
+    function square() {
+      if (!expression) return;
+      expression = `(${expression})^2`;
+      updateDisplay();
+    }
+
+    function reciprocal() {
+      if (!expression) return;
+      expression = `1/(${expression})`;
+      updateDisplay();
+    }
+
+    function toggleSign() {
+      if (!expression) return;
+      expression = `-(${expression})`;
+      updateDisplay();
+    }
+
+    function factorial() {
+      if (!expression) return;
+
+      try {
+        const value = evaluateExpression(expression);
+
+        if (value < 0 || !Number.isInteger(value)) {
+          throw new Error("Invalid factorial");
+        }
+
+        let result = 1;
+
+        for (let i = 2; i <= value; i++) {
+          result *= i;
+        }
+
+        expressionEl.textContent = `${formatExpression(expression)}! =`;
+        expression = String(result);
+        resultEl.textContent = expression;
+        justCalculated = true;
+      } catch {
+        resultEl.textContent = "Error";
+        expressionEl.textContent = "팩토리얼은 0 이상의 정수만 가능합니다";
+        expression = "";
+        justCalculated = true;
+      }
+    }
+
+    function toggleAngleMode() {
+      angleMode = angleMode === "DEG" ? "RAD" : "DEG";
+
+      angleModeBtn.textContent = angleMode;
+      degChip.classList.toggle("active", angleMode === "DEG");
+      radChip.classList.toggle("active", angleMode === "RAD");
+    }
+
+    document.addEventListener("keydown", event => {
+      const key = event.key;
+
+      if (!Number.isNaN(Number(key))) {
+        appendValue(key);
+      }
+
+      if (["+", "-", "*", "/", "%", ".", "(", ")"].includes(key)) {
+        appendValue(key);
+      }
+
+      if (key === "Enter" || key === "=") {
+        event.preventDefault();
+        calculate();
+      }
+
+      if (key === "Backspace") {
+        deleteLast();
+      }
+
+      if (key === "Escape") {
+        clearAll();
+      }
+    });
+  </script>
+</body>
+</html>
