@@ -1,0 +1,948 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>해양사고 인사이트 대시보드</title>
+  <style>
+    :root{
+      --bg0:#061827;
+      --bg1:#08243a;
+      --bg2:#0a3c5d;
+      --glass:rgba(255,255,255,.12);
+      --glass2:rgba(255,255,255,.18);
+      --line:rgba(255,255,255,.18);
+      --text:#ecfbff;
+      --muted:#a9d3df;
+      --cyan:#38d6ff;
+      --mint:#61ffd1;
+      --gold:#ffd166;
+      --rose:#ff6b8a;
+      --blue:#68a8ff;
+      --shadow:0 24px 80px rgba(0,0,0,.36);
+      --radius:26px;
+    }
+
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      color:var(--text);
+      font-family: "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", Arial, sans-serif;
+      background:
+        radial-gradient(circle at 18% 10%, rgba(56,214,255,.28), transparent 26%),
+        radial-gradient(circle at 82% 4%, rgba(97,255,209,.18), transparent 24%),
+        linear-gradient(160deg,var(--bg0),var(--bg1) 48%,#04111f);
+      min-height:100vh;
+      overflow-x:hidden;
+    }
+
+    body::before{
+      content:"";
+      position:fixed;
+      inset:-30%;
+      background:
+        conic-gradient(from 90deg at 50% 50%, transparent, rgba(56,214,255,.08), transparent, rgba(97,255,209,.08), transparent);
+      animation: rotateMist 28s linear infinite;
+      pointer-events:none;
+      z-index:-3;
+    }
+
+    @keyframes rotateMist{to{transform:rotate(360deg)}}
+
+    .noise{
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      opacity:.08;
+      z-index:-1;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.7'/%3E%3C/svg%3E");
+    }
+
+    .shell{
+      width:min(1220px, calc(100% - 34px));
+      margin:0 auto;
+    }
+
+    .hero{
+      position:relative;
+      min-height:620px;
+      display:grid;
+      grid-template-columns:1.05fr .95fr;
+      gap:28px;
+      align-items:center;
+      padding:48px 0 34px;
+    }
+
+    .hero-copy{
+      position:relative;
+      z-index:2;
+    }
+
+    .eyebrow{
+      display:inline-flex;
+      gap:10px;
+      align-items:center;
+      padding:9px 14px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      background:rgba(255,255,255,.08);
+      backdrop-filter: blur(18px);
+      box-shadow:0 10px 40px rgba(56,214,255,.08);
+      color:#d8fbff;
+      font-size:14px;
+      letter-spacing:.02em;
+    }
+    .eyebrow .dot{
+      width:9px;height:9px;border-radius:50%;
+      background:var(--mint);
+      box-shadow:0 0 18px var(--mint);
+      animation:pulse 1.8s ease-in-out infinite;
+    }
+    @keyframes pulse{50%{transform:scale(1.5);opacity:.65}}
+
+    h1{
+      margin:24px 0 18px;
+      font-size:clamp(42px, 7vw, 88px);
+      line-height:.98;
+      letter-spacing:-.08em;
+      text-wrap:balance;
+    }
+
+    .gradient-text{
+      background:linear-gradient(110deg,#fff 4%,#a7f6ff 34%,#6bffdd 68%,#fff);
+      -webkit-background-clip:text;
+      background-clip:text;
+      color:transparent;
+      filter:drop-shadow(0 18px 32px rgba(56,214,255,.18));
+    }
+
+    .lead{
+      color:var(--muted);
+      font-size:18px;
+      max-width:680px;
+      margin:0 0 28px;
+    }
+
+    .quick-actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      margin-top:26px;
+    }
+
+    .btn{
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:13px 18px;
+      color:var(--text);
+      background:rgba(255,255,255,.08);
+      text-decoration:none;
+      font-weight:800;
+      cursor:pointer;
+      transition:.25s transform,.25s background,.25s box-shadow;
+      backdrop-filter: blur(18px);
+    }
+    .btn:hover{
+      transform:translateY(-3px);
+      background:rgba(255,255,255,.16);
+      box-shadow:0 14px 42px rgba(56,214,255,.18);
+    }
+    .btn.primary{
+      background:linear-gradient(135deg,var(--cyan),#64f6da);
+      color:#042033;
+      border:none;
+    }
+
+    .video-card{
+      position:relative;
+      min-height:520px;
+      border-radius:36px;
+      overflow:hidden;
+      background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.05));
+      border:1px solid var(--line);
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(18px);
+      transform-style:preserve-3d;
+    }
+
+    #oceanCanvas{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      display:block;
+      background:
+        radial-gradient(circle at 50% 35%,rgba(73,213,255,.25),transparent 36%),
+        linear-gradient(180deg,rgba(7,40,62,.5),rgba(3,13,24,.92));
+    }
+
+    .radar-ui{
+      position:absolute;
+      inset:22px;
+      pointer-events:none;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+    }
+
+    .radar-top{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 12px;
+      border-radius:999px;
+      background:rgba(0,0,0,.28);
+      border:1px solid rgba(255,255,255,.16);
+      color:#dffbff;
+      font-size:12px;
+      backdrop-filter:blur(12px);
+    }
+
+    .scan-line{
+      height:3px;
+      width:100%;
+      border-radius:999px;
+      background:linear-gradient(90deg,transparent,var(--mint),transparent);
+      opacity:.7;
+      animation:scan 2.4s ease-in-out infinite;
+    }
+    @keyframes scan{
+      0%,100%{transform:translateY(-170px);opacity:.12}
+      50%{transform:translateY(170px);opacity:.9}
+    }
+
+    .radar-caption{
+      padding:18px;
+      border-radius:24px;
+      background:rgba(0,0,0,.34);
+      border:1px solid rgba(255,255,255,.14);
+      backdrop-filter:blur(14px);
+    }
+    .radar-caption strong{display:block;font-size:22px}
+    .radar-caption span{color:var(--muted);font-size:13px}
+
+    .section{
+      margin:34px 0;
+      padding:28px;
+      border-radius:var(--radius);
+      background:rgba(255,255,255,.09);
+      border:1px solid var(--line);
+      box-shadow:var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .section-title{
+      display:flex;
+      align-items:end;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:22px;
+    }
+    h2{
+      margin:0;
+      font-size:clamp(24px,3vw,36px);
+      letter-spacing:-.05em;
+    }
+    .section-title p{
+      margin:6px 0 0;
+      color:var(--muted);
+    }
+
+    .control-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr auto;
+      gap:14px;
+      align-items:end;
+    }
+
+    label{
+      display:block;
+      font-size:13px;
+      font-weight:900;
+      color:#dffaff;
+      margin:0 0 7px;
+    }
+
+    select,input{
+      width:100%;
+      padding:14px 16px;
+      border:1px solid rgba(255,255,255,.18);
+      border-radius:16px;
+      background:rgba(3,16,27,.65);
+      color:var(--text);
+      outline:none;
+      font-size:15px;
+      transition:.2s box-shadow,.2s border;
+    }
+    select:focus,input:focus{
+      border-color:var(--cyan);
+      box-shadow:0 0 0 4px rgba(56,214,255,.14);
+    }
+
+    .kpi-grid{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:16px;
+    }
+
+    .kpi{
+      position:relative;
+      overflow:hidden;
+      padding:20px;
+      border-radius:24px;
+      background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.07));
+      border:1px solid rgba(255,255,255,.16);
+      min-height:142px;
+    }
+    .kpi::after{
+      content:"";
+      position:absolute;
+      width:160px;height:160px;
+      border-radius:50%;
+      right:-70px;top:-80px;
+      background:radial-gradient(circle,rgba(56,214,255,.24),transparent 68%);
+    }
+    .kpi .name{color:var(--muted);font-weight:800;font-size:13px}
+    .kpi .value{
+      display:block;
+      margin-top:10px;
+      font-size:clamp(30px,4vw,48px);
+      font-weight:950;
+      letter-spacing:-.06em;
+    }
+    .kpi .sub{color:#cdebf2;font-size:13px}
+
+    .dashboard{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:18px;
+      align-items:start;
+    }
+
+    .chart-box,.table-box{
+      border-radius:24px;
+      padding:20px;
+      background:rgba(2,14,24,.5);
+      border:1px solid rgba(255,255,255,.14);
+      overflow:hidden;
+    }
+
+    .bars{
+      display:grid;
+      gap:14px;
+      margin-top:16px;
+    }
+    .bar-row{
+      display:grid;
+      grid-template-columns:90px 1fr 70px;
+      gap:12px;
+      align-items:center;
+      animation:fadeUp .45s both;
+    }
+    .bar-label{font-weight:900;color:#eaffff}
+    .bar-track{
+      height:30px;
+      border-radius:999px;
+      background:rgba(255,255,255,.08);
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.12);
+      position:relative;
+    }
+    .bar-fill{
+      height:100%;
+      width:0%;
+      border-radius:999px;
+      background:linear-gradient(90deg,var(--cyan),var(--mint));
+      box-shadow:0 0 22px rgba(97,255,209,.35);
+      transition:width .7s cubic-bezier(.2,.8,.2,1);
+    }
+    .bar-value{text-align:right;font-weight:950;color:#fff}
+
+    .line-chart{
+      height:290px;
+      width:100%;
+      margin-top:8px;
+      border-radius:20px;
+      background:
+        linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);
+      background-size:100% 25%, 10% 100%;
+      overflow:visible;
+    }
+    .line-path{
+      fill:none;
+      stroke:url(#lineGrad);
+      stroke-width:4;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+      filter:drop-shadow(0 0 10px rgba(56,214,255,.7));
+      stroke-dasharray:1300;
+      stroke-dashoffset:1300;
+      animation:drawLine 1.8s ease forwards;
+    }
+    @keyframes drawLine{to{stroke-dashoffset:0}}
+
+    .dot{
+      fill:#fff;
+      stroke:var(--mint);
+      stroke-width:3;
+      filter:drop-shadow(0 0 8px rgba(97,255,209,.8));
+    }
+
+    .table-wrap{
+      overflow:auto;
+      max-height:500px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.12);
+    }
+    table{
+      width:100%;
+      min-width:760px;
+      border-collapse:collapse;
+      background:rgba(255,255,255,.03);
+    }
+    th,td{
+      padding:13px 14px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      text-align:right;
+      white-space:nowrap;
+    }
+    th:first-child,td:first-child{text-align:center;font-weight:950}
+    th{
+      position:sticky;
+      top:0;
+      z-index:1;
+      background:rgba(5,31,50,.96);
+      color:#c9f9ff;
+      font-size:13px;
+    }
+    tbody tr{
+      transition:.18s background,.18s transform;
+    }
+    tbody tr:hover{
+      background:rgba(56,214,255,.10);
+    }
+    tbody tr.highlight{
+      background:rgba(255,209,102,.22);
+      outline:2px solid rgba(255,209,102,.62);
+    }
+
+    .ticker{
+      margin:26px 0;
+      border-block:1px solid rgba(255,255,255,.16);
+      overflow:hidden;
+      background:rgba(0,0,0,.22);
+    }
+    .ticker-track{
+      display:flex;
+      width:max-content;
+      animation:marquee 24s linear infinite;
+    }
+    .ticker span{
+      display:inline-flex;
+      gap:10px;
+      align-items:center;
+      padding:14px 28px;
+      color:#dffcff;
+      font-weight:900;
+    }
+    .ticker b{color:var(--gold)}
+    @keyframes marquee{to{transform:translateX(-50%)}}
+
+    .toast{
+      position:fixed;
+      right:22px;
+      bottom:22px;
+      padding:14px 16px;
+      border-radius:16px;
+      background:rgba(2,14,24,.8);
+      border:1px solid rgba(255,255,255,.18);
+      color:#eaffff;
+      box-shadow:var(--shadow);
+      transform:translateY(120%);
+      transition:.3s transform;
+      z-index:20;
+      backdrop-filter:blur(14px);
+    }
+    .toast.show{transform:translateY(0)}
+
+    .reveal{
+      opacity:0;
+      transform:translateY(26px);
+      transition:.7s opacity,.7s transform;
+    }
+    .reveal.in{
+      opacity:1;
+      transform:none;
+    }
+    @keyframes fadeUp{
+      from{opacity:0;transform:translateY(10px)}
+      to{opacity:1;transform:none}
+    }
+
+    @media (max-width:980px){
+      .hero,.dashboard{grid-template-columns:1fr}
+      .video-card{min-height:420px}
+      .kpi-grid{grid-template-columns:repeat(2,1fr)}
+      .control-grid{grid-template-columns:1fr}
+    }
+    @media (max-width:560px){
+      .shell{width:min(100% - 22px,1220px)}
+      .section{padding:18px;border-radius:20px}
+      .kpi-grid{grid-template-columns:1fr}
+      .bar-row{grid-template-columns:76px 1fr 58px}
+      .hero{padding-top:24px}
+    }
+  </style>
+</head>
+<body>
+  <div class="noise"></div>
+
+  <header class="shell hero">
+    <div class="hero-copy">
+      <div class="eyebrow"><span class="dot"></span>해양수산부 정보화 대시보드 · Interactive HTML</div>
+      <h1><span class="gradient-text">해양사고<br>데이터를 한눈에.</span></h1>
+      <p class="lead">
+        1998년부터 2012년까지의 연도별·사고유형별 현황을 선택, 검색, 비교할 수 있는 단일 HTML 대시보드입니다.
+        배경의 움직이는 해상 레이더 애니메이션과 실시간 차트 효과를 포함했습니다.
+      </p>
+      <div class="quick-actions">
+        <a class="btn primary" href="#dashboard">대시보드 보기</a>
+        <button class="btn" id="playDemo">자동 시연 시작</button>
+        <button class="btn" id="copySummary">현재 요약 복사</button>
+      </div>
+    </div>
+
+    <div class="video-card" aria-label="움직이는 해상 레이더 애니메이션">
+      <canvas id="oceanCanvas"></canvas>
+      <div class="radar-ui">
+        <div class="radar-top">
+          <span class="pill">LIVE DATA VIEW</span>
+          <span class="pill" id="clock">--:--:--</span>
+        </div>
+        <div class="scan-line"></div>
+        <div class="radar-caption">
+          <strong>Animated Ocean Radar</strong>
+          <span>파도, 레이더 스윕, 선박 포인트가 계속 움직이는 영상형 배경</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="ticker">
+    <div class="ticker-track" id="tickerTrack"></div>
+  </div>
+
+  <main class="shell" id="dashboard">
+    <section class="section reveal">
+      <div class="section-title">
+        <div>
+          <h2>조회 조건</h2>
+          <p>연도 필터와 검색 강조 기능을 사용해 특정 연도를 빠르게 확인하세요.</p>
+        </div>
+      </div>
+
+      <div class="control-grid">
+        <div>
+          <label for="yearSelect">연도 선택 필터</label>
+          <select id="yearSelect"></select>
+        </div>
+        <div>
+          <label for="yearSearch">검색 기능: 연도 직접 입력</label>
+          <input id="yearSearch" type="search" placeholder="예: 2011 입력 시 해당 행 강조" inputmode="numeric" />
+        </div>
+        <button class="btn primary" id="resetBtn">초기화</button>
+      </div>
+    </section>
+
+    <section class="kpi-grid reveal" aria-label="핵심 지표">
+      <article class="kpi">
+        <div class="name">선택 범위</div>
+        <span class="value" id="kpiRange">전체</span>
+        <div class="sub">드롭다운 선택 기준</div>
+      </article>
+      <article class="kpi">
+        <div class="name">전체 건수 합계</div>
+        <span class="value countup" id="kpiTotal">0</span>
+        <div class="sub">총계 기준</div>
+      </article>
+      <article class="kpi">
+        <div class="name">최다 사고 유형</div>
+        <span class="value" id="kpiTopType">-</span>
+        <div class="sub" id="kpiTopDetail">유형별 합산 기준</div>
+      </article>
+      <article class="kpi">
+        <div class="name">최고 발생 연도</div>
+        <span class="value" id="kpiMaxYear">-</span>
+        <div class="sub" id="kpiMaxDetail">총계가 가장 큰 연도</div>
+      </article>
+    </section>
+
+    <section class="section dashboard reveal">
+      <div class="chart-box">
+        <div class="section-title">
+          <div>
+            <h2>사고유형별 건수</h2>
+            <p>선택한 연도 또는 전체 기간의 유형별 합계입니다.</p>
+          </div>
+        </div>
+        <div id="barChart" class="bars"></div>
+      </div>
+
+      <div class="chart-box">
+        <div class="section-title">
+          <div>
+            <h2>연도별 총계 흐름</h2>
+            <p>1998~2012년 총계 추이를 애니메이션 선 그래프로 표시합니다.</p>
+          </div>
+        </div>
+        <svg id="lineChart" class="line-chart" viewBox="0 0 760 290" role="img" aria-label="연도별 총계 선 그래프"></svg>
+      </div>
+    </section>
+
+    <section class="section table-box reveal">
+      <div class="section-title">
+        <div>
+          <h2>연도별·유형별 상세 표</h2>
+          <p>검색한 연도는 강조 표시됩니다. 표에는 선택한 연도만 표시하거나 전체 연도를 표시할 수 있습니다.</p>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr id="tableHead"></tr></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast">복사되었습니다.</div>
+
+  <script>
+    const DATA = [{"연도": 1998, "총계": 772, "충돌": 147, "접촉": 5, "좌초": 77, "전복": 14, "화재폭발": 60, "침몰": 84, "기관손상": 242}, {"연도": 1999, "총계": 849, "충돌": 173, "접촉": 2, "좌초": 68, "전복": 27, "화재폭발": 67, "침몰": 90, "기관손상": 269}, {"연도": 2000, "총계": 634, "충돌": 130, "접촉": 11, "좌초": 58, "전복": 19, "화재폭발": 48, "침몰": 63, "기관손상": 196}, {"연도": 2001, "총계": 610, "충돌": 141, "접촉": 15, "좌초": 60, "전복": 21, "화재폭발": 62, "침몰": 72, "기관손상": 135}, {"연도": 2002, "총계": 557, "충돌": 184, "접촉": 13, "좌초": 58, "전복": 29, "화재폭발": 42, "침몰": 55, "기관손상": 110}, {"연도": 2003, "총계": 531, "충돌": 182, "접촉": 9, "좌초": 65, "전복": 22, "화재폭발": 53, "침몰": 50, "기관손상": 57}, {"연도": 2004, "총계": 804, "충돌": 210, "접촉": 12, "좌초": 75, "전복": 35, "화재폭발": 57, "침몰": 69, "기관손상": 147}, {"연도": 2005, "총계": 658, "충돌": 172, "접촉": 10, "좌초": 46, "전복": 22, "화재폭발": 71, "침몰": 45, "기관손상": 166}, {"연도": 2006, "총계": 657, "충돌": 167, "접촉": 17, "좌초": 66, "전복": 16, "화재폭발": 41, "침몰": 25, "기관손상": 195}, {"연도": 2007, "총계": 566, "충돌": 148, "접촉": 9, "좌초": 39, "전복": 21, "화재폭발": 37, "침몰": 19, "기관손상": 185}, {"연도": 2008, "총계": 480, "충돌": 125, "접촉": 15, "좌초": 32, "전복": 8, "화재폭발": 25, "침몰": 18, "기관손상": 145}, {"연도": 2009, "총계": 723, "충돌": 160, "접촉": 10, "좌초": 43, "전복": 18, "화재폭발": 34, "침몰": 22, "기관손상": 253}, {"연도": 2010, "총계": 737, "충돌": 174, "접촉": 22, "좌초": 64, "전복": 17, "화재폭발": 25, "침몰": 22, "기관손상": 236}, {"연도": 2011, "총계": 946, "충돌": 208, "접촉": 23, "좌초": 64, "전복": 38, "화재폭발": 57, "침몰": 27, "기관손상": 261}, {"연도": 2012, "총계": 726, "충돌": 157, "접촉": 21, "좌초": 53, "전복": 25, "화재폭발": 55, "침몰": 26, "기관손상": 178}];
+
+    const columns = Object.keys(DATA[0]);
+    const typeColumns = columns.filter(c => c !== "연도" && c !== "총계");
+
+    const yearSelect = document.getElementById("yearSelect");
+    const yearSearch = document.getElementById("yearSearch");
+    const resetBtn = document.getElementById("resetBtn");
+    const tableHead = document.getElementById("tableHead");
+    const tableBody = document.getElementById("tableBody");
+    const barChart = document.getElementById("barChart");
+    const lineChart = document.getElementById("lineChart");
+    const tickerTrack = document.getElementById("tickerTrack");
+
+    const kpiRange = document.getElementById("kpiRange");
+    const kpiTotal = document.getElementById("kpiTotal");
+    const kpiTopType = document.getElementById("kpiTopType");
+    const kpiTopDetail = document.getElementById("kpiTopDetail");
+    const kpiMaxYear = document.getElementById("kpiMaxYear");
+    const kpiMaxDetail = document.getElementById("kpiMaxDetail");
+    const toast = document.getElementById("toast");
+
+    const fmt = n => Number(n).toLocaleString("ko-KR");
+
+    function init(){
+      const optionAll = document.createElement("option");
+      optionAll.value = "all";
+      optionAll.textContent = "전체 연도";
+      yearSelect.appendChild(optionAll);
+
+      DATA.forEach(row => {
+        const option = document.createElement("option");
+        option.value = row["연도"];
+        option.textContent = `${row["연도"]}년`;
+        yearSelect.appendChild(option);
+      });
+
+      tableHead.innerHTML = columns.map(c => `<th>${c}</th>`).join("");
+
+      const topTicker = [...DATA]
+        .sort((a,b)=>b["총계"]-a["총계"])
+        .slice(0,5)
+        .map(row => `<span>${row["연도"]}년 <b>${fmt(row["총계"])}</b>건</span>`)
+        .join("");
+      tickerTrack.innerHTML = topTicker + topTicker + topTicker + topTicker;
+
+      yearSelect.addEventListener("change", render);
+      yearSearch.addEventListener("input", render);
+      resetBtn.addEventListener("click", () => {
+        yearSelect.value = "all";
+        yearSearch.value = "";
+        render();
+      });
+
+      document.getElementById("copySummary").addEventListener("click", copySummary);
+      document.getElementById("playDemo").addEventListener("click", startDemo);
+
+      render();
+      initReveal();
+      startClock();
+      startOceanCanvas();
+    }
+
+    function selectedRows(){
+      if(yearSelect.value === "all") return DATA;
+      return DATA.filter(row => String(row["연도"]) === yearSelect.value);
+    }
+
+    function typeSums(rows){
+      return typeColumns.map(type => ({
+        type,
+        value: rows.reduce((sum,row)=>sum + Number(row[type] || 0),0)
+      })).sort((a,b)=>b.value-a.value);
+    }
+
+    function render(){
+      const rows = selectedRows();
+      const searched = yearSearch.value.trim();
+
+      renderKpis(rows);
+      renderBars(rows);
+      renderTable(rows, searched);
+      renderLineChart();
+    }
+
+    function renderKpis(rows){
+      const total = rows.reduce((sum,row)=>sum + Number(row["총계"] || 0),0);
+      const top = typeSums(rows)[0];
+      const maxRow = [...rows].sort((a,b)=>b["총계"]-a["총계"])[0];
+
+      kpiRange.textContent = yearSelect.value === "all" ? "전체" : `${yearSelect.value}년`;
+      animateNumber(kpiTotal, total);
+      kpiTopType.textContent = top ? top.type : "-";
+      kpiTopDetail.textContent = top ? `${fmt(top.value)}건` : "유형별 합산 기준";
+      kpiMaxYear.textContent = maxRow ? maxRow["연도"] : "-";
+      kpiMaxDetail.textContent = maxRow ? `${fmt(maxRow["총계"])}건` : "총계가 가장 큰 연도";
+    }
+
+    function animateNumber(el, target){
+      const start = Number(el.dataset.value || 0);
+      const end = Number(target || 0);
+      const duration = 650;
+      const started = performance.now();
+      el.dataset.value = end;
+
+      function tick(now){
+        const p = Math.min((now-started)/duration,1);
+        const eased = 1 - Math.pow(1-p,3);
+        el.textContent = fmt(Math.round(start + (end-start)*eased));
+        if(p < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    function renderBars(rows){
+      const sums = typeSums(rows);
+      const max = Math.max(...sums.map(d=>d.value),1);
+      barChart.innerHTML = sums.map((d,i)=>{
+        const pct = Math.max(4, d.value / max * 100);
+        return `<div class="bar-row" style="animation-delay:${i*35}ms">
+          <div class="bar-label">${d.type}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+          <div class="bar-value">${fmt(d.value)}</div>
+        </div>`;
+      }).join("");
+    }
+
+    function renderTable(rows, searched){
+      tableBody.innerHTML = rows.map(row => {
+        const highlight = searched && String(row["연도"]).includes(searched);
+        const cells = columns.map(c => `<td>${fmt(row[c])}</td>`).join("");
+        return `<tr class="${highlight ? "highlight" : ""}">${cells}</tr>`;
+      }).join("");
+    }
+
+    function renderLineChart(){
+      const w=760, h=290, pad=34;
+      const minY = Math.min(...DATA.map(d=>d["총계"]));
+      const maxY = Math.max(...DATA.map(d=>d["총계"]));
+      const x = i => pad + i * ((w-pad*2)/(DATA.length-1));
+      const y = v => h-pad - ((v-minY)/(maxY-minY || 1))*(h-pad*2);
+
+      const points = DATA.map((d,i)=>[x(i), y(d["총계"])]);
+      const dAttr = points.map((p,i)=>`${i ? "L" : "M"} ${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(" ");
+
+      const labels = DATA.map((d,i)=>{
+        if(i % 2 !== 0) return "";
+        return `<text x="${x(i)}" y="${h-8}" text-anchor="middle" fill="#9fd8e8" font-size="11">${d["연도"]}</text>`;
+      }).join("");
+
+      const dots = DATA.map((d,i)=>`
+        <circle class="dot" cx="${x(i)}" cy="${y(d["총계"])}" r="4">
+          <title>${d["연도"]}년: ${fmt(d["총계"])}건</title>
+        </circle>`).join("");
+
+      lineChart.innerHTML = `
+        <defs>
+          <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#38d6ff"/>
+            <stop offset="55%" stop-color="#61ffd1"/>
+            <stop offset="100%" stop-color="#ffd166"/>
+          </linearGradient>
+        </defs>
+        <text x="${pad}" y="24" fill="#9fd8e8" font-size="12">총계</text>
+        <path class="line-path" d="${dAttr}"></path>
+        ${dots}
+        ${labels}
+      `;
+    }
+
+    function copySummary(){
+      const rows = selectedRows();
+      const total = rows.reduce((sum,row)=>sum + Number(row["총계"] || 0),0);
+      const top = typeSums(rows)[0];
+      const text = `선택 범위: ${kpiRange.textContent}\n전체 건수 합계: ${fmt(total)}건\n최다 사고 유형: ${top.type} ${fmt(top.value)}건`;
+      navigator.clipboard.writeText(text).then(()=>showToast("현재 요약을 복사했습니다."));
+    }
+
+    function showToast(message){
+      toast.textContent = message;
+      toast.classList.add("show");
+      setTimeout(()=>toast.classList.remove("show"),1800);
+    }
+
+    let demoTimer = null;
+    function startDemo(){
+      if(demoTimer){
+        clearInterval(demoTimer);
+        demoTimer = null;
+        showToast("자동 시연을 중지했습니다.");
+        return;
+      }
+      let idx = 0;
+      const years = ["all", ...DATA.map(d=>String(d["연도"]))];
+      showToast("자동 시연을 시작합니다.");
+      demoTimer = setInterval(()=>{
+        yearSelect.value = years[idx % years.length];
+        render();
+        idx++;
+      },1200);
+    }
+
+    function initReveal(){
+      const io = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if(entry.isIntersecting) entry.target.classList.add("in");
+        });
+      }, {threshold:.12});
+      document.querySelectorAll(".reveal").forEach(el=>io.observe(el));
+    }
+
+    function startClock(){
+      const clock = document.getElementById("clock");
+      setInterval(()=>{
+        clock.textContent = new Date().toLocaleTimeString("ko-KR", {hour12:false});
+      },1000);
+    }
+
+    function startOceanCanvas(){
+      const canvas = document.getElementById("oceanCanvas");
+      const ctx = canvas.getContext("2d");
+      let w=0,h=0,t=0;
+
+      const ships = Array.from({length:15}, (_,i)=>({
+        x:Math.random(),
+        y:Math.random(),
+        r:2+Math.random()*3,
+        s:.0006+Math.random()*.0015,
+        a:Math.random()*Math.PI*2
+      }));
+
+      function resize(){
+        const rect = canvas.getBoundingClientRect();
+        w = canvas.width = Math.floor(rect.width * devicePixelRatio);
+        h = canvas.height = Math.floor(rect.height * devicePixelRatio);
+        ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+        w = rect.width;
+        h = rect.height;
+      }
+      window.addEventListener("resize", resize);
+      resize();
+
+      function draw(){
+        t += .012;
+        ctx.clearRect(0,0,w,h);
+
+        const grad = ctx.createLinearGradient(0,0,0,h);
+        grad.addColorStop(0,"rgba(9,68,101,.28)");
+        grad.addColorStop(1,"rgba(1,8,18,.82)");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0,0,w,h);
+
+        for(let layer=0; layer<5; layer++){
+          ctx.beginPath();
+          const amp = 12 + layer*8;
+          const yBase = h*(.25 + layer*.14);
+          for(let x=0; x<=w; x+=8){
+            const y = yBase + Math.sin(x*.015 + t*(1.2+layer*.25))*amp + Math.cos(x*.008 + t*2)*amp*.36;
+            if(x===0) ctx.moveTo(x,y);
+            else ctx.lineTo(x,y);
+          }
+          ctx.strokeStyle = `rgba(92,220,255,${.12 + layer*.035})`;
+          ctx.lineWidth = 1.2 + layer*.35;
+          ctx.stroke();
+        }
+
+        const cx=w*.5, cy=h*.48;
+        const radius=Math.min(w,h)*.34;
+        ctx.save();
+        ctx.translate(cx,cy);
+        ctx.strokeStyle="rgba(97,255,209,.22)";
+        ctx.lineWidth=1;
+        for(let r=radius/4;r<=radius;r+=radius/4){
+          ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.stroke();
+        }
+        ctx.beginPath(); ctx.moveTo(-radius,0); ctx.lineTo(radius,0); ctx.moveTo(0,-radius); ctx.lineTo(0,radius); ctx.stroke();
+
+        const angle = t*1.25;
+        const sweep = ctx.createRadialGradient(0,0,0,0,0,radius);
+        sweep.addColorStop(0,"rgba(97,255,209,.42)");
+        sweep.addColorStop(1,"rgba(97,255,209,0)");
+        ctx.rotate(angle);
+        ctx.beginPath();
+        ctx.moveTo(0,0);
+        ctx.arc(0,0,radius,-.12,.12);
+        ctx.closePath();
+        ctx.fillStyle=sweep;
+        ctx.fill();
+        ctx.restore();
+
+        ships.forEach(ship=>{
+          ship.x += Math.cos(ship.a)*ship.s;
+          ship.y += Math.sin(ship.a)*ship.s;
+          if(ship.x<0||ship.x>1) ship.a = Math.PI-ship.a;
+          if(ship.y<0||ship.y>1) ship.a = -ship.a;
+          ship.x = Math.max(0,Math.min(1,ship.x));
+          ship.y = Math.max(0,Math.min(1,ship.y));
+
+          const sx = ship.x*w;
+          const sy = ship.y*h;
+          const glow = 8 + Math.sin(t*6 + ship.r)*4;
+          ctx.beginPath();
+          ctx.arc(sx,sy,ship.r,0,Math.PI*2);
+          ctx.fillStyle="rgba(255,209,102,.92)";
+          ctx.shadowColor="rgba(255,209,102,.9)";
+          ctx.shadowBlur=glow;
+          ctx.fill();
+          ctx.shadowBlur=0;
+        });
+
+        requestAnimationFrame(draw);
+      }
+      draw();
+    }
+
+    init();
+  </script>
+</body>
+</html>
