@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>취업제한 회보서 발급 챗봇</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #0f2044;
+  --navy-mid: #1a3260;
+  --navy-light: #2a4a8a;
+  --gold: #c8a951;
+  --gold-light: #e8c97a;
+  --gold-pale: #fdf6e3;
+  --cream: #f7f4ef;
+  --white: #ffffff;
+  --text-dark: #0f1e35;
+  --text-mid: #3a4a6a;
+  --text-muted: #7a8aa0;
+  --danger: #c0392b;
+  --danger-bg: #fdf0ee;
+  --danger-border: #e8b4b0;
+  --success: #1a6b3c;
+  --success-bg: #eef7f2;
+  --success-border: #a8d5bc;
+  --warn: #7a5c00;
+  --warn-bg: #fef9ec;
+  --warn-border: #e8d68a;
+  --border: #d8dde8;
+  --shadow-sm: 0 2px 8px rgba(15,32,68,.08);
+  --shadow-md: 0 4px 20px rgba(15,32,68,.12);
+  --shadow-lg: 0 8px 40px rgba(15,32,68,.18);
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Noto Sans KR', sans-serif;
+  background: var(--cream);
+  min-height: 100vh;
+  color: var(--text-dark);
+}
+
+/* ── 배경 패턴 ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(15,32,68,.07) 0%, transparent 70%),
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%230f2044' fill-opacity='0.025'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+/* ── 레이아웃 ── */
+.page-wrap {
+  position: relative; z-index: 1;
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+/* ── 헤더 ── */
+.site-header {
+  text-align: center;
+  padding: 2.5rem 2rem 2rem;
+  margin-bottom: 1.5rem;
+  background: var(--navy);
+  border-radius: 20px;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+.site-header::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(200,169,81,.15) 0%, transparent 60%);
+  pointer-events: none;
+}
+/* 배경 법봉 SVG */
+.header-bg-icon {
+  position: absolute;
+  right: -30px; top: -20px;
+  width: 220px; height: 220px;
+  opacity: .04;
+}
+.header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(200,169,81,.18);
+  border: 1px solid rgba(200,169,81,.4);
+  border-radius: 100px;
+  padding: 5px 14px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--gold-light);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+.site-header h1 {
+  font-family: 'Noto Serif KR', serif;
+  font-size: clamp(1.4rem, 3.5vw, 2rem);
+  font-weight: 700;
+  color: var(--white);
+  line-height: 1.3;
+  margin-bottom: .5rem;
+}
+.site-header h1 span { color: var(--gold-light); }
+.site-header p {
+  font-size: 13px;
+  color: rgba(255,255,255,.55);
+  line-height: 1.7;
+}
+.header-tags {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
+  margin-top: 1.25rem;
+}
+.htag {
+  font-size: 11px; padding: 3px 10px;
+  border: 1px solid rgba(200,169,81,.35);
+  border-radius: 100px;
+  color: rgba(255,255,255,.65);
+  background: rgba(255,255,255,.05);
+}
+
+/* ── 진행 단계 표시 ── */
+.progress-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.pb-step {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  flex: 1; min-width: 70px;
+  position: relative;
+}
+.pb-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 14px; left: calc(50% + 18px);
+  width: calc(100% - 36px);
+  height: 1px;
+  background: var(--border);
+  transition: background .4s;
+}
+.pb-step.done:not(:last-child)::after { background: var(--gold); }
+.pb-dot {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700;
+  border: 2px solid var(--border);
+  background: var(--white);
+  color: var(--text-muted);
+  transition: all .3s;
+  position: relative; z-index: 1;
+}
+.pb-step.active .pb-dot {
+  background: var(--navy); border-color: var(--navy);
+  color: var(--white);
+  box-shadow: 0 0 0 4px rgba(15,32,68,.12);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+.pb-step.done .pb-dot {
+  background: var(--gold); border-color: var(--gold); color: var(--navy);
+}
+@keyframes pulse-dot {
+  0%,100% { box-shadow: 0 0 0 4px rgba(15,32,68,.12); }
+  50% { box-shadow: 0 0 0 7px rgba(15,32,68,.06); }
+}
+.pb-label {
+  font-size: 10px; color: var(--text-muted); font-weight: 400;
+  text-align: center; line-height: 1.3;
+  transition: color .3s;
+  white-space: nowrap;
+}
+.pb-step.active .pb-label { color: var(--navy); font-weight: 600; }
+.pb-step.done .pb-label { color: var(--gold); }
+
+/* ── 채팅 창 ── */
+.chat-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.chat-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .75rem 1.25rem;
+  background: var(--navy);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.toolbar-dots { display: flex; gap: 6px; }
+.toolbar-dots span {
+  width: 10px; height: 10px; border-radius: 50%;
+}
+.toolbar-dots span:nth-child(1) { background: #ff5f57; }
+.toolbar-dots span:nth-child(2) { background: #febc2e; }
+.toolbar-dots span:nth-child(3) { background: #28c840; }
+.toolbar-title {
+  font-size: 12px; font-weight: 500;
+  color: rgba(255,255,255,.6);
+  letter-spacing: .04em;
+}
+.toolbar-home {
+  font-size: 11px; padding: 4px 10px;
+  border: 1px solid rgba(200,169,81,.45);
+  border-radius: 100px;
+  background: transparent;
+  color: var(--gold-light);
+  cursor: pointer;
+  display: flex; align-items: center; gap: 4px;
+  transition: all .2s;
+}
+.toolbar-home:hover { background: rgba(200,169,81,.15); }
+
+/* ── 메시지 영역 ── */
+.chat-messages {
+  padding: 1.25rem;
+  display: flex; flex-direction: column; gap: 14px;
+  min-height: 340px; max-height: 560px;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+.chat-messages::-webkit-scrollbar { width: 4px; }
+.chat-messages::-webkit-scrollbar-track { background: transparent; }
+.chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+/* ── 말풍선 ── */
+.msg { display: flex; gap: 10px; align-items: flex-end; }
+.msg.bot { flex-direction: row; }
+.msg.user { flex-direction: row-reverse; }
+.msg { opacity: 0; transform: translateY(16px); }
+.msg.show { animation: msg-appear .35s ease forwards; }
+@keyframes msg-appear {
+  to { opacity: 1; transform: translateY(0); }
+}
+.av {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700;
+  flex-shrink: 0;
+}
+.bot .av {
+  background: var(--navy); color: var(--gold-light);
+  font-family: 'Noto Serif KR', serif;
+}
+.user .av { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
+.bubble {
+  max-width: 85%;
+  padding: 11px 15px;
+  border-radius: 16px;
+  font-size: 13.5px; line-height: 1.7;
+}
+.bot .bubble {
+  background: var(--cream);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+  color: var(--text-dark);
+}
+.user .bubble {
+  background: var(--navy);
+  color: rgba(255,255,255,.9);
+  border-bottom-right-radius: 4px;
+}
+.bubble strong { font-weight: 600; }
+
+/* ── UI 컴포넌트 ── */
+.law-panel {
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.law-tabs {
+  display: flex; flex-wrap: wrap;
+  background: var(--cream);
+  border-bottom: 1px solid var(--border);
+}
+.ltab {
+  font-size: 11px; padding: 6px 10px;
+  cursor: pointer; border: none;
+  background: transparent; color: var(--text-muted);
+  font-family: 'Noto Sans KR', sans-serif;
+  transition: all .15s; white-space: nowrap;
+}
+.ltab:hover { color: var(--navy); background: rgba(15,32,68,.04); }
+.ltab.on {
+  color: var(--navy); font-weight: 600;
+  background: var(--white);
+  border-bottom: 2px solid var(--navy);
+}
+.crime-list {
+  padding: 10px;
+  display: flex; flex-wrap: wrap; gap: 6px;
+  max-height: 120px; overflow-y: auto;
+  background: var(--white);
+}
+.cbtn {
+  font-size: 12px; padding: 5px 11px;
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  background: var(--white); color: var(--text-mid);
+  cursor: pointer; font-family: 'Noto Sans KR', sans-serif;
+  transition: all .15s;
+}
+.cbtn:hover { border-color: var(--navy); color: var(--navy); }
+.cbtn.sel {
+  background: var(--navy); color: var(--white);
+  border-color: var(--navy);
+}
+.crime-tags {
+  display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px;
+}
+.ctag {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; padding: 4px 10px;
+  background: rgba(15,32,68,.08); color: var(--navy);
+  border-radius: 100px;
+}
+.ctag button {
+  background: none; border: none; cursor: pointer;
+  color: var(--navy); font-size: 13px; line-height: 1;
+  opacity: .6; padding: 0;
+}
+.ctag button:hover { opacity: 1; }
+
+/* 날짜 선택 */
+.date-row {
+  margin-top: 10px;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.date-row input[type=date] {
+  height: 38px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0 12px; font-size: 13px;
+  background: var(--white); color: var(--text-dark);
+  font-family: 'Noto Sans KR', sans-serif;
+  min-width: 160px;
+  transition: border-color .15s;
+}
+.date-row input[type=date]:focus { outline: none; border-color: var(--navy); }
+
+/* 처분 카드 */
+.disp-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; margin-top: 10px;
+}
+.disp-card {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer; background: var(--white);
+  transition: all .2s;
+}
+.disp-card:hover { border-color: var(--navy); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+.disp-card.sel { border-color: var(--navy); background: rgba(15,32,68,.04); }
+.disp-card .dt { font-size: 13px; font-weight: 600; color: var(--text-dark); }
+.disp-card.sel .dt { color: var(--navy); }
+.disp-card .ds { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.disp-extra {
+  margin-top: 10px; display: flex; flex-wrap: wrap;
+  gap: 6px; align-items: center;
+  padding: 10px 12px;
+  background: var(--cream); border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.disp-extra span { font-size: 13px; color: var(--text-mid); }
+.disp-extra input[type=number] {
+  width: 60px; height: 32px;
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: 0 8px; font-size: 13px;
+  background: var(--white); color: var(--text-dark);
+  font-family: 'Noto Sans KR', sans-serif;
+}
+.disp-extra input[type=number]:focus { outline: none; border-color: var(--navy); }
+
+/* 업종 버튼 */
+.industry-btns {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px;
+}
+.ibtn {
+  font-size: 12px; padding: 5px 12px;
+  border: 1px solid var(--border); border-radius: 100px;
+  background: var(--white); color: var(--text-mid);
+  cursor: pointer; font-family: 'Noto Sans KR', sans-serif;
+  transition: all .15s;
+}
+.ibtn:hover { border-color: var(--navy); color: var(--navy); background: rgba(15,32,68,.04); }
+
+/* 액션 바 */
+.action-bar {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 12px; padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.btn-confirm {
+  height: 34px; padding: 0 18px;
+  border: none; border-radius: 100px;
+  background: var(--navy); color: var(--white);
+  font-size: 12px; font-weight: 600;
+  cursor: pointer; font-family: 'Noto Sans KR', sans-serif;
+  display: flex; align-items: center; gap: 5px;
+  transition: all .2s;
+}
+.btn-confirm:hover { background: var(--navy-light); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+.btn-home {
+  height: 34px; padding: 0 14px;
+  border: 1px solid var(--danger-border); border-radius: 100px;
+  background: transparent; color: var(--danger);
+  font-size: 12px; cursor: pointer;
+  font-family: 'Noto Sans KR', sans-serif;
+  display: flex; align-items: center; gap: 5px;
+  transition: all .2s;
+}
+.btn-home:hover { background: var(--danger-bg); }
+.hint-text { font-size: 11px; color: var(--text-muted); }
+
+/* 결과 카드 */
+.result-card {
+  border-radius: var(--radius-sm);
+  padding: 13px 15px; margin-top: 8px;
+  animation: result-slide .4s ease forwards;
+}
+@keyframes result-slide {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.result-card.ok { background: var(--success-bg); border: 1px solid var(--success-border); }
+.result-card.ng { background: var(--danger-bg); border: 1px solid var(--danger-border); }
+.result-card.warn { background: var(--warn-bg); border: 1px solid var(--warn-border); }
+.rc-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; letter-spacing: .02em;
+  margin-bottom: 5px;
+}
+.result-card.ok .rc-label { color: var(--success); }
+.result-card.ng .rc-label { color: var(--danger); }
+.result-card.warn .rc-label { color: var(--warn); }
+.rc-icon {
+  width: 18px; height: 18px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+}
+.result-card.ok .rc-icon { background: var(--success); color: var(--white); }
+.result-card.ng .rc-icon { background: var(--danger); color: var(--white); }
+.result-card.warn .rc-icon { background: var(--warn-border); color: var(--warn); }
+.dday-pill {
+  display: inline-block; font-size: 12px; font-weight: 700;
+  padding: 3px 12px; border-radius: 100px;
+  margin-top: 6px;
+  background: var(--danger); color: var(--white);
+  animation: dday-pop .4s .2s ease both;
+}
+@keyframes dday-pop {
+  from { transform: scale(.7); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.amend-note {
+  font-size: 11px; margin-top: 6px; padding: 5px 10px;
+  background: rgba(200,169,81,.12); border-left: 3px solid var(--gold);
+  border-radius: 0 4px 4px 0; color: var(--text-mid);
+}
+.summary-table {
+  width: 100%; font-size: 12px; border-collapse: collapse;
+  margin-bottom: 12px;
+}
+.summary-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-mid);
+}
+.summary-table td:first-child {
+  width: 90px; color: var(--text-muted);
+  font-size: 11px; white-space: nowrap;
+}
+.summary-table td strong { color: var(--text-dark); font-weight: 600; }
+
+/* ── 입력창 ── */
+.chat-input-area {
+  padding: .875rem 1.25rem;
+  border-top: 1px solid var(--border);
+  background: var(--cream);
+  display: flex; gap: 8px;
+}
+.chat-input-area input[type=text] {
+  flex: 1; height: 40px;
+  border: 1px solid var(--border); border-radius: 100px;
+  padding: 0 16px; font-size: 13px;
+  background: var(--white); color: var(--text-dark);
+  font-family: 'Noto Sans KR', sans-serif;
+  transition: border-color .15s;
+}
+.chat-input-area input[type=text]:focus { outline: none; border-color: var(--navy); }
+.chat-input-area button {
+  height: 40px; padding: 0 20px;
+  border: none; border-radius: 100px;
+  background: var(--navy); color: var(--white);
+  font-size: 13px; font-weight: 600;
+  cursor: pointer; font-family: 'Noto Sans KR', sans-serif;
+  transition: all .2s;
+}
+.chat-input-area button:hover { background: var(--navy-light); }
+
+/* ── 푸터 ── */
+.site-footer {
+  text-align: center; margin-top: 2rem;
+  font-size: 11px; color: var(--text-muted); line-height: 1.8;
+}
+.site-footer a { color: var(--navy); text-decoration: none; }
+
+/* ── 반응형 ── */
+@media (max-width: 540px) {
+  .page-wrap { padding: 1rem .75rem 3rem; }
+  .pb-label { display: none; }
+  .disp-grid { grid-template-columns: 1fr; }
+  .bubble { max-width: 92%; font-size: 13px; }
+}
+
+/* ── 타이핑 인디케이터 ── */
+.typing-indicator {
+  display: flex; gap: 4px; align-items: center;
+  padding: 4px 0;
+}
+.typing-indicator span {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--text-muted);
+  animation: typing .9s ease-in-out infinite;
+}
+.typing-indicator span:nth-child(2) { animation-delay: .2s; }
+.typing-indicator span:nth-child(3) { animation-delay: .4s; }
+@keyframes typing {
+  0%,60%,100% { transform: translateY(0); opacity: .4; }
+  30% { transform: translateY(-6px); opacity: 1; }
+}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- 헤더 -->
+  <header class="site-header">
+    <svg class="header-bg-icon" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M100 10 L190 50 L190 90 Q190 150 100 190 Q10 150 10 90 L10 50 Z" stroke="white" stroke-width="3" fill="none"/>
+      <circle cx="100" cy="100" r="35" stroke="white" stroke-width="3" fill="none"/>
+      <path d="M70 100 L90 120 L130 80" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M60 55 L140 55" stroke="white" stroke-width="2" stroke-linecap="round" opacity=".5"/>
+      <path d="M55 65 L145 65" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity=".3"/>
+    </svg>
+    <div class="header-badge">
+      ⚖ 법무행정 지원 시스템
+    </div>
+    <h1>취업제한 <span>회보서 발급</span> 챗봇</h1>
+    <p>14개 관련 법령 및 개정 이력을 자동 반영하여<br>취업제한 여부를 즉시 판단합니다</p>
+    <div class="header-tags">
+      <span class="htag">아청법</span>
+      <span class="htag">아동복지법</span>
+      <span class="htag">장애인복지법</span>
+      <span class="htag">성폭력처벌법</span>
+      <span class="htag">사회복지사업법</span>
+      <span class="htag">형법 외 9개</span>
+    </div>
+  </header>
+
+  <!-- 진행 단계 -->
+  <div class="progress-bar" id="progress-bar">
+    <div class="pb-step active" id="pb0"><div class="pb-dot">1</div><div class="pb-label">범죄명</div></div>
+    <div class="pb-step" id="pb1"><div class="pb-dot">2</div><div class="pb-label">범죄일</div></div>
+    <div class="pb-step" id="pb2"><div class="pb-dot">3</div><div class="pb-label">확정일</div></div>
+    <div class="pb-step" id="pb3"><div class="pb-dot">4</div><div class="pb-label">처분결과</div></div>
+    <div class="pb-step" id="pb4"><div class="pb-dot">5</div><div class="pb-label">취업업종</div></div>
+    <div class="pb-step" id="pb5"><div class="pb-dot">6</div><div class="pb-label">결과</div></div>
+  </div>
+
+  <!-- 채팅 카드 -->
+  <div class="chat-card">
+    <div class="chat-toolbar">
+      <div class="toolbar-dots"><span></span><span></span><span></span></div>
+      <div class="toolbar-title">취업제한 회보서 발급 시스템</div>
+      <button class="toolbar-home" onclick="resetAll()">⌂ 처음으로</button>
+    </div>
+    <div class="chat-messages" id="msgs"></div>
+    <div class="chat-input-area">
+      <input type="text" id="inp" placeholder="취업 업종을 입력하거나 위 버튼을 클릭하세요..." onkeydown="if(event.key==='Enter')sendIndustry()">
+      <button onclick="sendIndustry()">전송 →</button>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <p>※ 본 시스템의 결과는 참고용이며, 최종 판단은 관할 기관의 확인이 필요합니다.</p>
+    <p>소급 적용 불가 원칙 및 개정 시행일 기준을 반영하였습니다.</p>
+  </footer>
+</div>
+
+<script>
+const LAWS={
+  "아청법":{name:"아동·청소년의 성보호에 관한 법률",crimes:["아동·청소년 강간","아동·청소년 유사강간","아동·청소년 강제추행","아동·청소년 준강간","아동·청소년 준강제추행","아동·청소년 성매매","성착취물 제작·배포","아동·청소년이용음란물 소지"],institutionKeys:["어린이집","유치원","학교","학원","청소년시설","아동복지시설","방과후학교"],amendments:[{e:"2012-01-01",p:10,n:"2012년 개정 — 취업제한 10년 신설"},{e:"2020-05-19",p:10,ac:"2020-05-19",n:"2020년 개정 — 방과후학교 등 제한 기관 확대"}]},
+  "아동복지법":{name:"아동복지법",crimes:["아동학대","아동 신체적 학대","아동 정서적 학대","아동 성적 학대","아동 유기·방임","아동 착취"],institutionKeys:["아동복지시설","어린이집","유치원","학교","방과후학교","아동보호전문기관"],amendments:[{e:"2012-08-05",p:10,n:"2012년 개정 — 취업제한 10년 신설"},{e:"2017-09-22",p:10,ac:"2017-09-22",n:"2017년 개정 — 제한 기관 확대"}]},
+  "장애인복지법":{name:"장애인복지법",crimes:["장애인 신체적 학대","장애인 정서적 학대","장애인 성적 학대","장애인 경제적 착취","장애인 유기·방임"],institutionKeys:["장애인복지시설","장애인활동지원기관","장애인의료재활시설"],amendments:[{e:"2016-11-30",p:10,n:"2016년 개정 — 취업제한 10년 신설"}]},
+  "성폭력처벌법":{name:"성폭력범죄의 처벌 등에 관한 특례법",crimes:["강간","유사강간","강제추행","준강간","준강제추행","카메라등이용촬영","통신매체이용음란","성적목적다중이용장소침입","업무상위력에의한추행","공중밀집장소추행"],institutionKeys:["어린이집","유치원","학교","학원","청소년시설","아동복지시설","장애인복지시설","노인복지시설","의료기관","사회복지시설"],amendments:[{e:"2012-12-18",p:10,n:"2012년 개정 — 취업제한 10년 도입"},{e:"2021-09-24",p:10,ac:"2021-09-24",n:"2021년 개정 — 의료기관·노인복지시설 등 확대"}]},
+  "성매매알선법":{name:"성매매알선 등 행위의 처벌에 관한 법률",crimes:["성매매 알선","성매매 강요","성매매 목적 인신매매","성매매 광고","성매매"],institutionKeys:["사회복지시설","청소년시설","아동복지시설","결혼중개업"],amendments:[{e:"2004-09-23",p:5,n:"2004년 제정 — 취업제한 5년"}]},
+  "사회복지사업법":{name:"사회복지사업법",crimes:["사회복지법인 횡령","사회복지기금 유용","사회복지 회계 부정","후원금 유용"],institutionKeys:["사회복지법인","사회복지시설","노인복지시설","장애인복지시설","아동복지시설"],amendments:[{e:"2012-01-26",p:5,n:"2012년 개정 — 취업제한 5년 신설"},{e:"2019-07-01",p:5,ac:"2019-07-01",n:"2019년 개정 — 제한 기관 범위 확대"}]},
+  "입양특례법":{name:"입양특례법",crimes:["아동 매매","허위 입양","입양 목적 유인·인신매매"],institutionKeys:["입양기관","아동복지시설"],amendments:[{e:"2012-08-05",p:10,n:"2012년 개정 — 취업제한 10년 신설"}]},
+  "결혼중개업법":{name:"결혼중개업의 관리에 관한 법률",crimes:["허위정보 제공","국제결혼 중개 위반","미등록 결혼중개업 운영","중개업자 의무 위반"],institutionKeys:["결혼중개업"],amendments:[{e:"2008-06-15",p:5,n:"2008년 제정 — 취업제한 5년"}]},
+  "형법":{name:"형법",crimes:["살인","강도","절도","사기","횡령","배임","폭행","상해","협박","약취·유인","인신매매","방화"],institutionKeys:["공공기관","사회복지시설"],amendments:[{e:"1953-09-18",p:null,n:"형 종류·기간에 따라 별도 판단"}]},
+  "여권법":{name:"여권법",crimes:["여권 부정 발급","여권 위·변조","타인 여권 사용"],institutionKeys:["출입국관련기관","공공기관"],amendments:[{e:"2008-01-01",p:3,n:"2008년 개정 — 취업제한 3년"}]},
+  "출입국관리법":{name:"출입국관리법",crimes:["불법 체류 알선","불법 입국 알선","외국인 고용 위반","체류자격 위반"],institutionKeys:["출입국관련기관","외국인고용사업체","결혼중개업"],amendments:[{e:"1992-12-10",p:3,n:"취업제한 3년"}]},
+  "공직선거법":{name:"공직선거법",crimes:["선거 매수","허위사실 유포","선거 방해","투표함 위조","선거비용법 위반"],institutionKeys:["공공기관","공직"],amendments:[{e:"1994-03-16",p:5,n:"1994년 제정 — 취업제한 5년"},{e:"2005-08-04",p:5,ac:"2005-08-04",n:"2005년 개정 — 제한 범위 확대"}]},
+  "공동주택관리법":{name:"공동주택관리법",crimes:["관리비 횡령","관리비 부정 집행","입주자대표회의 비리","공동주택관리 위반"],institutionKeys:["공동주택관리업","주택관리업"],amendments:[{e:"2016-08-12",p:5,n:"2016년 제정 — 취업제한 5년"}]},
+  "생활물류법":{name:"생활물류서비스산업발전법",crimes:["생활물류업 위반","택배업 위반","배송업 부정"],institutionKeys:["생활물류서비스업","택배업"],amendments:[{e:"2021-07-27",p:3,n:"2021년 제정 — 취업제한 3년"}]}
+};
+const INDUSTRY_MAP=[
+  {kw:["어린이집","보육","보육교사"],keys:["어린이집"]},
+  {kw:["유치원","유아교육"],keys:["유치원"]},
+  {kw:["학교","교사","교원","교직","초등","중학","고등","대학"],keys:["학교"]},
+  {kw:["학원","교습소","과외","방과후"],keys:["학원","방과후학교"]},
+  {kw:["청소년","청소년센터","청소년수련"],keys:["청소년시설"]},
+  {kw:["아동복지","아동보호","아동센터"],keys:["아동복지시설","아동보호전문기관"]},
+  {kw:["장애인","장애인시설","장애인활동"],keys:["장애인복지시설","장애인활동지원기관","장애인의료재활시설"]},
+  {kw:["노인","요양원","노인복지","실버","요양시설"],keys:["노인복지시설"]},
+  {kw:["사회복지","복지관","사회복지법인"],keys:["사회복지시설","사회복지법인"]},
+  {kw:["병원","의원","의료","간호","요양병원"],keys:["의료기관"]},
+  {kw:["결혼중개","결혼정보"],keys:["결혼중개업"]},
+  {kw:["입양"],keys:["입양기관"]},
+  {kw:["공무원","공직","공공기관","공기업"],keys:["공공기관","공직"]},
+  {kw:["주택관리","아파트관리","공동주택"],keys:["공동주택관리업","주택관리업"]},
+  {kw:["택배","물류","배송"],keys:["생활물류서비스업","택배업"]},
+  {kw:["출입국","비자","외국인고용"],keys:["출입국관련기관","외국인고용사업체"]}
+];
+
+let S={step:0,crimes:[],crimeDate:null,confirmedDate:null,disp:null,dispDetail:{},industry:null,industryKeys:[]};
+let currentTab=Object.keys(LAWS)[0];
+const $msgs=document.getElementById('msgs');
+
+function sb(){$msgs.scrollTop=$msgs.scrollHeight;}
+
+function addBot(html, delay=0){
+  return new Promise(resolve=>{
+    setTimeout(()=>{
+      // 타이핑 인디케이터
+      const tw=document.createElement('div');tw.className='msg bot show';
+      const tav=document.createElement('div');tav.className='av';tav.textContent='AI';
+      const tb=document.createElement('div');tb.className='bubble';
+      tb.innerHTML='<div class="typing-indicator"><span></span><span></span><span></span></div>';
+      tw.appendChild(tav);tw.appendChild(tb);$msgs.appendChild(tw);sb();
+      setTimeout(()=>{
+        tw.remove();
+        const w=document.createElement('div');w.className='msg bot';
+        const av=document.createElement('div');av.className='av';av.textContent='AI';
+        const b=document.createElement('div');b.className='bubble';b.innerHTML=html;
+        w.appendChild(av);w.appendChild(b);$msgs.appendChild(w);
+        requestAnimationFrame(()=>{ w.classList.add('show'); sb(); });
+        resolve(b);
+      },600);
+    },delay);
+  });
+}
+
+function addUser(txt){
+  const w=document.createElement('div');w.className='msg user';
+  const av=document.createElement('div');av.className='av';av.textContent='나';
+  const b=document.createElement('div');b.className='bubble';b.innerHTML=txt;
+  w.appendChild(av);w.appendChild(b);$msgs.appendChild(w);
+  requestAnimationFrame(()=>{ w.classList.add('show'); sb(); });
+}
+
+function setStep(n){
+  for(let i=0;i<6;i++){
+    const el=document.getElementById('pb'+i);
+    if(!el)continue;
+    el.className='pb-step'+(i<n?' done':i===n?' active':'');
+  }
+}
+
+function mkDate(s){if(!s)return null;const d=new Date(s+'T00:00:00');return isNaN(d)?null:d;}
+function addYrs(d,y){const r=new Date(d);r.setFullYear(r.getFullYear()+y);return r;}
+function fmtD(d){return d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일';}
+function todayISO(){const t=new Date();const m=t.getMonth()+1,d=t.getDate();return t.getFullYear()+'-'+(m<10?'0'+m:m)+'-'+(d<10?'0'+d:d);}
+function ddayStr(target){
+  const now=new Date();now.setHours(0,0,0,0);
+  const t=new Date(target);t.setHours(0,0,0,0);
+  const diff=Math.round((t-now)/86400000);
+  if(diff<0)return null;
+  return diff===0?'D-day':'D-'+diff;
+}
+
+function actionBar(confirmFn, label='확인 →'){
+  return `<div class="action-bar">
+    <button class="btn-confirm" onclick="${confirmFn}()">${label}</button>
+    <button class="btn-home" onclick="resetAll()">⌂ 처음으로</button>
+  </div>`;
+}
+
+function dateUI(fn){
+  return `<div class="date-row">
+    <input type="date" id="inp_cal" max="${todayISO()}">
+  </div>`+actionBar(fn);
+}
+function readDateUI(){
+  const c=document.getElementById('inp_cal');
+  if(c&&c.value){const d=new Date(c.value+'T00:00:00');if(!isNaN(d.getTime()))return d;}
+  return null;
+}
+
+// ── STEP 0: 범죄 선택 ──────────────────────────────────────
+function crimePanel(){
+  const tabs=Object.keys(LAWS).map(k=>`<button class="ltab${k===currentTab?' on':''}" onclick="switchTab('${k}')">${k}</button>`).join('');
+  const crimes=LAWS[currentTab].crimes.map(c=>{
+    const sel=S.crimes.some(x=>x.lawKey===currentTab&&x.crime===c);
+    return `<button class="cbtn${sel?' sel':''}" onclick="toggleCrime('${currentTab}','${c.replace(/'/g,"\\'")}')">${c}</button>`;
+  }).join('');
+  const tags=S.crimes.map((c,i)=>`<span class="ctag">${c.lawKey} · ${c.crime}<button onclick="removeTag(${i})">×</button></span>`).join('');
+  return `<div class="law-panel">
+    <div class="law-tabs" id="law-tabs">${tabs}</div>
+    <div class="crime-list" id="crime-list">${crimes}</div>
+  </div>
+  <div class="crime-tags" id="crime-tags">${tags}</div>
+  <div class="action-bar" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+    <span id="crime-confirm-wrap">
+      ${S.crimes.length>0
+        ?`<button class="btn-confirm" onclick="confirmCrimes()">선택 완료 (${S.crimes.length}개) →</button>`
+        :`<span class="hint-text">범죄를 선택하면 완료 버튼이 나타납니다</span>`}
+    </span>
+  </div>`;
+}
+
+window.switchTab=function(k){
+  currentTab=k;
+  document.querySelectorAll('.ltab').forEach(el=>el.classList.toggle('on',el.textContent===k));
+  const list=document.getElementById('crime-list');
+  if(list)list.innerHTML=LAWS[k].crimes.map(c=>{
+    const sel=S.crimes.some(x=>x.lawKey===k&&x.crime===c);
+    return `<button class="cbtn${sel?' sel':''}" onclick="toggleCrime('${k}','${c.replace(/'/g,"\\'")}')">${c}</button>`;
+  }).join('');
+};
+window.toggleCrime=function(lawKey,crime){
+  const idx=S.crimes.findIndex(x=>x.lawKey===lawKey&&x.crime===crime);
+  if(idx>=0)S.crimes.splice(idx,1);else S.crimes.push({lawKey,crime});
+  refreshCrimePanel();
+};
+window.removeTag=function(i){S.crimes.splice(i,1);refreshCrimePanel();};
+function refreshCrimePanel(){
+  const list=document.getElementById('crime-list');
+  if(list)list.innerHTML=LAWS[currentTab].crimes.map(c=>{
+    const sel=S.crimes.some(x=>x.lawKey===currentTab&&x.crime===c);
+    return `<button class="cbtn${sel?' sel':''}" onclick="toggleCrime('${currentTab}','${c.replace(/'/g,"\\'")}')">${c}</button>`;
+  }).join('');
+  const tags=document.getElementById('crime-tags');
+  if(tags)tags.innerHTML=S.crimes.map((c,i)=>`<span class="ctag">${c.lawKey} · ${c.crime}<button onclick="removeTag(${i})">×</button></span>`).join('');
+  const wrap=document.getElementById('crime-confirm-wrap');
+  if(wrap)wrap.innerHTML=S.crimes.length>0
+    ?`<button class="btn-confirm" onclick="confirmCrimes()">선택 완료 (${S.crimes.length}개) →</button>`
+    :`<span class="hint-text">범죄를 선택하면 완료 버튼이 나타납니다</span>`;
+}
+window.confirmCrimes=function(){
+  if(!S.crimes.length){return;}
+  addUser(S.crimes.map(c=>c.lawKey+' · '+c.crime).join(' / '));
+  S.step=1;setStep(1);
+  addBot(`<strong>${S.crimes.length}개 범죄</strong>가 선택되었습니다.<br>
+    <div class="crime-tags" style="margin-top:6px">${S.crimes.map(c=>`<span class="ctag">${c.lawKey} · ${c.crime}</span>`).join('')}</div><br>
+    📅 <strong>범죄 발생일</strong>을 달력으로 선택해 주세요.`+dateUI('doConfirmCrimeDate'),200);
+};
+
+window.doConfirmCrimeDate=function(){
+  const d=readDateUI();if(!d){alert('날짜를 선택해 주세요.');return;}
+  addUser(fmtD(d));S.crimeDate=d;S.step=2;setStep(2);
+  addBot(`범죄 발생일 <strong>${fmtD(d)}</strong><br><br>📋 <strong>형사재판 확정일</strong>을 달력으로 선택해 주세요.`+dateUI('doConfirmConfirmedDate'),200);
+};
+window.doConfirmConfirmedDate=function(){
+  const d=readDateUI();if(!d){alert('날짜를 선택해 주세요.');return;}
+  if(d<S.crimeDate){alert('확정일이 범죄 발생일보다 앞설 수 없습니다.');return;}
+  addUser(fmtD(d));S.confirmedDate=d;S.step=3;setStep(3);
+  addBot(`확정일 <strong>${fmtD(d)}</strong><br><br>⚖️ <strong>처분 결과</strong>를 선택해 주세요.`+buildDispUI(),200);
+};
+
+function buildDispUI(){
+  return `<div class="disp-grid" id="disp-grid">
+    <div class="disp-card" id="dc-징역" onclick="selectDisp('징역')"><div class="dt">징역</div><div class="ds">형기 입력</div></div>
+    <div class="disp-card" id="dc-금고" onclick="selectDisp('금고')"><div class="dt">금고</div><div class="ds">형기 입력</div></div>
+    <div class="disp-card" id="dc-벌금" onclick="selectDisp('벌금')"><div class="dt">벌금</div><div class="ds">금액 입력</div></div>
+    <div class="disp-card" id="dc-집행유예" onclick="selectDisp('집행유예')"><div class="dt">집행유예</div><div class="ds">형기 + 유예기간</div></div>
+    <div class="disp-card" id="dc-선고유예" onclick="selectDisp('선고유예')"><div class="dt">선고유예</div><div class="ds">취업제한 없음</div></div>
+    <div class="disp-card" id="dc-기소유예" onclick="selectDisp('기소유예')"><div class="dt">기소유예</div><div class="ds">취업제한 없음</div></div>
+    <div class="disp-card" id="dc-무죄" onclick="selectDisp('무죄')"><div class="dt">무죄</div><div class="ds">취업제한 없음</div></div>
+    <div class="disp-card" id="dc-공소기각" onclick="selectDisp('공소기각')"><div class="dt">공소기각·면소</div><div class="ds">취업제한 없음</div></div>
+  </div>
+  <div id="disp-extra"></div>
+  <div class="action-bar" id="disp-actions" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+    <button class="btn-home" onclick="resetAll()">⌂ 처음으로</button>
+  </div>`;
+}
+window.selectDisp=function(type){
+  S.disp=type;S.dispDetail={};
+  document.querySelectorAll('.disp-card').forEach(el=>el.classList.remove('sel'));
+  const c=document.getElementById('dc-'+type);if(c)c.classList.add('sel');
+  const ex=document.getElementById('disp-extra');if(!ex)return;
+  let inner='';
+  if(type==='징역'||type==='금고'){
+    inner=`<div class="disp-extra"><span>형기:</span><input type="number" id="dp_y" min="0" max="50" placeholder="년" style="width:56px"> <span>년</span><input type="number" id="dp_m" min="0" max="11" placeholder="월" style="width:52px"> <span>월</span></div>`;
+  }else if(type==='집행유예'){
+    inner=`<div class="disp-extra"><span>징역:</span><input type="number" id="dp_y" min="0" max="50" placeholder="년" style="width:52px"> <span>년</span><input type="number" id="dp_m" min="0" max="11" placeholder="월" style="width:48px"> <span>월</span><span style="margin-left:6px">유예:</span><input type="number" id="dp_sy" min="1" max="5" placeholder="년" style="width:48px"> <span>년</span></div>`;
+  }else if(type==='벌금'){
+    inner=`<div class="disp-extra"><span>벌금액:</span><input type="number" id="dp_fine" min="0" placeholder="금액" style="width:90px"> <span>만원</span></div>`;
+  }
+  ex.innerHTML=inner;
+  const acts=document.getElementById('disp-actions');
+  if(acts)acts.innerHTML=`<button class="btn-confirm" onclick="confirmDisp()">확인 →</button><button class="btn-home" onclick="resetAll()">⌂ 처음으로</button>`;
+};
+window.confirmDisp=function(){
+  if(!S.disp)return;
+  const t=S.disp;
+  if(t==='징역'||t==='금고'){
+    const y=parseInt(document.getElementById('dp_y')?.value||0)||0;
+    const m=parseInt(document.getElementById('dp_m')?.value||0)||0;
+    if(!y&&!m){alert('형기를 입력해 주세요.');return;}
+    S.dispDetail={years:y,months:m};
+  }else if(t==='집행유예'){
+    const y=parseInt(document.getElementById('dp_y')?.value||0)||0;
+    const m=parseInt(document.getElementById('dp_m')?.value||0)||0;
+    const sy=parseInt(document.getElementById('dp_sy')?.value||0)||0;
+    if(!y&&!m){alert('징역 기간을 입력해 주세요.');return;}
+    if(!sy){alert('유예 기간을 입력해 주세요.');return;}
+    S.dispDetail={years:y,months:m,suspendYears:sy};
+  }else if(t==='벌금'){
+    S.dispDetail={fine:parseInt(document.getElementById('dp_fine')?.value||0)||0};
+  }
+  addUser(dispLabel());S.step=4;setStep(4);
+  addBot(`처분: <strong>${dispLabel()}</strong><br><br>🏢 <strong>취업하려는 업종</strong>을 선택하거나 아래 입력창에 직접 입력해 주세요.
+    <div class="industry-btns">
+      <button class="ibtn" onclick="chooseInd('어린이집')">어린이집</button>
+      <button class="ibtn" onclick="chooseInd('학원')">학원</button>
+      <button class="ibtn" onclick="chooseInd('사회복지시설')">사회복지시설</button>
+      <button class="ibtn" onclick="chooseInd('장애인복지시설')">장애인복지시설</button>
+      <button class="ibtn" onclick="chooseInd('노인요양원')">노인요양원</button>
+      <button class="ibtn" onclick="chooseInd('병원')">병원</button>
+      <button class="ibtn" onclick="chooseInd('공무원')">공무원</button>
+      <button class="ibtn" onclick="chooseInd('결혼중개업')">결혼중개업</button>
+      <button class="ibtn" onclick="chooseInd('택배')">택배</button>
+    </div>
+    <div class="action-bar"><button class="btn-home" onclick="resetAll()">⌂ 처음으로</button></div>`,200);
+};
+function dispLabel(){
+  const t=S.disp;
+  if(t==='징역'||t==='금고')return t+` ${S.dispDetail.years||0}년 ${S.dispDetail.months||0}개월`;
+  if(t==='집행유예')return `집행유예 (징역 ${S.dispDetail.years||0}년 ${S.dispDetail.months||0}개월 / 유예 ${S.dispDetail.suspendYears}년)`;
+  if(t==='벌금')return `벌금 ${(S.dispDetail.fine||0).toLocaleString()}만원`;
+  return t;
+}
+
+window.chooseInd=function(v){document.getElementById('inp').value=v;sendIndustry();};
+window.sendIndustry=function(){
+  if(S.step!==4)return;
+  const v=document.getElementById('inp').value.trim();if(!v)return;
+  document.getElementById('inp').value='';
+  addUser(v);S.industry=v;S.industryKeys=matchInd(v);S.step=5;setStep(5);
+  showResult();
+};
+function matchInd(input){
+  const q=input.replace(/\s/g,'').toLowerCase();const s=new Set();
+  for(const m of INDUSTRY_MAP)for(const k of m.kw)if(q.includes(k.replace(/\s/g,'').toLowerCase()))m.keys.forEach(x=>s.add(x));
+  return [...s];
+}
+
+function pickAmend(amendments){
+  let best=null;
+  for(const a of amendments){
+    const eff=mkDate(a.e);if(!eff||S.confirmedDate<eff)continue;
+    if(a.ac&&S.confirmedDate<mkDate(a.ac))continue;
+    if(!best||eff>mkDate(best.e))best=a;
+  }
+  return best;
+}
+function isRestrict(){
+  const t=S.disp;
+  if(['무죄','공소기각','선고유예','기소유예'].includes(t))return false;
+  if(t==='벌금')return(S.dispDetail.fine||0)>=300;
+  return true;
+}
+
+function resultCard(type, icon, label, rows, amend){
+  const iconMap={ok:'✓',ng:'✕',warn:'!'};
+  let h=`<div class="result-card ${type}">
+    <div class="rc-label"><div class="rc-icon">${iconMap[type]||icon}</div>${label}</div>`;
+  h+=rows.map(r=>`<div style="font-size:12.5px;color:var(--text-mid);margin-top:3px">${r}</div>`).join('');
+  if(amend)h+=`<div class="amend-note">📌 ${amend}</div>`;
+  h+='</div>';
+  return h;
+}
+
+async function showResult(){
+  const restrict=isRestrict();
+  let html=`<div style="font-family:'Noto Serif KR',serif;font-size:14px;font-weight:600;color:var(--navy);margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid var(--gold)">📊 취업제한 판단 결과</div>`;
+  html+=`<table class="summary-table">
+    <tr><td>범죄</td><td><strong>${S.crimes.map(c=>c.lawKey+' · '+c.crime).join('<br>')}</strong></td></tr>
+    <tr><td>범죄 발생일</td><td>${fmtD(S.crimeDate)}</td></tr>
+    <tr><td>확정일</td><td>${fmtD(S.confirmedDate)}</td></tr>
+    <tr><td>처분</td><td>${dispLabel()}</td></tr>
+    <tr><td>취업 업종</td><td><strong>${S.industry}</strong></td></tr>
+  </table>`;
+
+  if(!restrict){
+    let msg='';
+    if(['무죄','공소기각'].includes(S.disp))msg='무죄·공소기각·면소 처분으로 취업제한 대상이 아닙니다.';
+    else if(['선고유예','기소유예'].includes(S.disp))msg='선고유예·기소유예 처분으로 취업제한 대상이 아닙니다.';
+    else msg=`벌금 ${(S.dispDetail.fine||0).toLocaleString()}만원 — 300만원 미만으로 일반적으로 취업제한 대상이 아닙니다.`;
+    html+=resultCard('ok','✓','취업 가능',[msg],'');
+  } else {
+    const now=new Date();const seen=new Set();
+    for(const c of S.crimes){
+      const lk=c.lawKey;if(seen.has(lk))continue;seen.add(lk);
+      const law=LAWS[lk];const amend=pickAmend(law.amendments);
+      const indMatch=S.industryKeys.length===0?true:S.industryKeys.some(k=>law.institutionKeys.includes(k));
+      if(!amend){
+        const earliest=law.amendments.slice().sort((a,b)=>new Date(a.e)-new Date(b.e))[0];
+        html+=resultCard('ok','✓',`취업 가능 — ${lk}`,
+          [`${c.crime}`,`확정일 당시 이 법령의 취업제한 조항이 시행 전이었습니다.`],
+          `이 법령 취업제한 적용: ${fmtD(mkDate(earliest.e))} 이후 확정 사건부터`);
+        continue;
+      }
+      if(amend.p===null){
+        html+=resultCard('warn','!',`별도 확인 필요 — ${lk}`,
+          [`${c.crime}`,`형 종류·기간에 따라 취업제한 여부가 다릅니다. 관할 기관 확인이 필요합니다.`],amend.n);
+        continue;
+      }
+      let startDate=new Date(S.confirmedDate);let pNote='';
+      if(S.disp==='집행유예'&&S.dispDetail.suspendYears){
+        startDate=addYrs(S.confirmedDate,S.dispDetail.suspendYears);
+        pNote=`집행유예 기간(${S.dispDetail.suspendYears}년) 종료 후부터 ${amend.p}년 제한`;
+      }
+      const ru=addYrs(startDate,amend.p);const isR=now<ru;const dd=ddayStr(ru);
+      if(isR&&!indMatch){
+        let rows=[`${c.crime}`,`<strong>${S.industry}</strong>은(는) 이 법령의 취업제한 기관에 해당하지 않습니다.`,
+          `이 법령 제한 기관: ${law.institutionKeys.join(', ')}`,
+          `⚠ 취업제한 종료일 ${fmtD(ru)}까지 해당 기관은 제한됩니다.`];
+        if(dd)rows.push(`<span class="dday-pill">${dd}</span>`);
+        html+=resultCard('warn','!',`해당 업종 제한 없음 — ${lk}`,rows,amend.n);
+      }else if(isR){
+        let rows=[`${c.crime}`,pNote||`확정일로부터 <strong>${amend.p}년</strong> 취업 제한`,`종료 예정: <strong>${fmtD(ru)}</strong>`];
+        if(dd)rows.push(`<span class="dday-pill">${dd}</span>`);
+        rows.push(`제한 기관: ${law.institutionKeys.join(', ')}`);
+        html+=resultCard('ng','✕',`취업 제한 — ${lk}`,rows,amend.n);
+      }else{
+        html+=resultCard('ok','✓',`취업 가능 — ${lk}`,
+          [`${c.crime}`,`취업제한 기간(${amend.p}년)이 경과하였습니다.`,`종료일: ${fmtD(ru)}`],amend.n);
+      }
+    }
+  }
+  html+=`<div style="margin-top:12px;font-size:11px;color:var(--text-muted);line-height:1.8">※ 본 결과는 참고용이며 최종 판단은 관할 기관 확인이 필요합니다.<br>※ 소급 적용 불가 원칙 및 개정 시행일 기준을 반영하였습니다.</div>`;
+  html+=`<div class="action-bar" style="margin-top:12px">
+    <button class="btn-confirm" onclick="resetAll()">↺ 새 조회 시작</button>
+    <button class="btn-home" onclick="resetAll()">⌂ 처음으로</button>
+  </div>`;
+  await addBot(html, 300);
+}
+
+function resetAll(){
+  S={step:0,crimes:[],crimeDate:null,confirmedDate:null,disp:null,dispDetail:{},industry:null,industryKeys:[]};
+  currentTab=Object.keys(LAWS)[0];
+  $msgs.innerHTML='';setStep(0);
+  setTimeout(init,100);
+}
+
+function init(){
+  addBot(`안녕하세요! <strong>취업제한 회보서 발급 시스템</strong>입니다.<br>
+    범죄 정보를 단계별로 입력하면 <strong>14개 법령 및 개정 이력</strong>을 자동 반영하여 취업제한 여부를 즉시 판단합니다.<br><br>
+    📌 아래에서 <strong>법령 탭을 선택한 뒤 범죄명을 클릭</strong>하세요. 복수 선택이 가능합니다.`+crimePanel(), 0);
+}
+init();
+</script>
+</body>
+</html>
